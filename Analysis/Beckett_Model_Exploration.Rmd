@@ -1,0 +1,209 @@
+---
+title: "MetaConstruct"
+author: "Grant Foster"
+date: "4/25/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Problem statement: Becker et al (2022) published a cool paper looking at changes in network properties as simulated mutualistic networks progressed through time (https://www.journals.uchicago.edu/doi/epdf/10.1086/720421). A somewhat small, but really interesting component of their model is that by the nature of the fact species can only invade areas where a mutualist partner is already present, there was a positive realtionship between dispersal and generalism.I liked that component, and thought it would be cool to look at mutualistic network assembly across a metacommunity context, where that dispersal-generalism relationship could be more explicitly enforced. 
+
+
+I'm going to start this by just trying to recreate a really simple, deterministic version of the Becker model here in R (they published their code in Mathmatica).
+
+```{r}
+n_anmials <- 3
+a_pops <- vector(mode="numeric", length=n_anmials) #animal population size
+a_traitM <- vector(mode="numeric", length=n_anmials) #animal trait mean
+a_traitV <- vector(mode="numeric", length=n_anmials) #animal trait variance
+
+n_plants <- 2
+p_pops <- vector(mode="numeric", length=n_plants) #plant population size
+p_traitM <- vector(mode="numeric", length=n_plants) #plant trait mean
+p_traitV <- vector(mode="numeric", length=n_plants) #plant trait variance
+```
+
+Make some dummy trait data
+```{r}
+p_pops[1:n_plants] <- c(10, 15)
+p_traitM[1:n_plants] <- c(0.25, 0.75)
+p_traitV[1:n_plants] <- c(0.1, 0.1) #All set to be the same in Becker paper
+
+a_pops[1:n_anmials] <- c(5, 10, 20)
+a_traitM[1:n_anmials] <- c(0.1, 0.66, 0.8)
+a_traitV[1:n_anmials] <- c(0.25, 0.5, 0.1)
+```
+
+
+Traits
+
+alpha: interaction strength between plants and animals
+```{r}
+alpha <- matrix(data=NA, nrow=n_anmials, ncol = n_plants) #Alpha: interaction strength between animal (row) and plant (column)
+A <- (2*pi)^-1
+
+for(i in 1:n_anmials){
+  for(j in 1:n_plants){
+    alpha[i,j] <- (A/a_traitV[i])*exp((-(a_traitM[i] - p_traitM[j])^2)/a_traitV[i]^2) #Squared difference between trait values, divided by the animals's variance
+  }
+}  
+
+colnames(alpha) <- c("p1", "p2")
+rownames(alpha) <- c("a1", "a2", "a3")
+
+alpha[alpha<0.05] <- 0 #Set values below a threshold to 0
+alpha
+```
+
+u: interspecific competition between plants (mediated by traits)
+u_min = u (no subscript) in Becker
+u_max = w in Becker
+
+###### Note: Really uncertain about the subscript on the traitV term in denominator in this equation! As becker sets them all to be the same it doesn't matter for the outcome whether you're using j or i, but if I change it this is likely not the correct form
+```{r}
+u <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
+
+u_min <- 0.0005
+u_max <- 0.05
+
+for(i in 1:n_plants){
+  for(j in 1:n_plants){
+    u[i, j] <- u_min + (u_max-u_min)*exp(-((p_traitM[i]-p_traitM[j])^2)/(p_traitV[j]))
+  }
+}  
+
+u
+```
+
+dynamics
+
+
+
+
+##########Pretty messed up as of right now
+
+#plant_next <- r*(competition_penalty)*(functional_pollinator_contrib)-plantdeath
+```{r}
+r <- 0.15
+#K <- c(100, 100)
+
+p_mu <- rep(0.05, n_plants)
+plant_dt[i] <- c(NA, NA)
+p_pops[1:n_plants] <- c(10, 15)
+
+output <- NULL
+for(t in 1:10){
+  output <- rbind(output, p_pops)
+  for(i in 1:n_plants){
+      #competition_penalty <- ((K[i]-sum(p_pops*u[,1]))/(K[i])) #Lotka-Volterra Style
+      competition_penalty <- 1-sum(p_pops*u[,i]) #Becket Style
+      
+      #Top: 57.68
+      
+      functional_pollinator_contrib <- (sum(alpha[,i]*a_pops)*p_pops[i])/(r+sum(alpha[,i]*a_pops))
+      
+      plant_death <- p_mu[i]*p_pops[i]
+      
+      plant_dt[i] <- r*(competition_penalty)*(functional_pollinator_contrib)-plant_death
+    }
+    p_pops <- p_pops + p_pops*plant_dt
+}
+
+plot(x=1:nrow(output), y=output[,1], type="l", ylim=c(5,16))
+lines(x=1:nrow(output), y=output[,2], type="l", col="red")
+```
+
+Now, let's do animal dynamics
+```{r}
+temp <- NULL
+
+for(i in 1:n_plants){
+  num <- alpha[1,i]
+  denom <- r + sum(alpha[,1]*a_pops)
+  value <- num/denom
+  temp <- rbind(temp, value)
+}
+
+lambda <- 0.5
+#K <- c(100, 100)
+
+a_mu <- rep(0.05, n_anmials)
+
+a_comp <- colSums(t(a_pops*alpha)*p_pops/((r+colSums(a_pops*alpha))))
+   #transpose so that plant dynamics are multiplied along the right margin
+
+a_comp*lambda-a_mu*a_pops
+
+```
+
+
+
+```{r}
+library(deSolve)
+```
+
+
+
+```{r}
+## Write a function for dN.dt
+dN.dt = function(N, r, K){
+  dN.dt = r*N*(1 - N/K)
+  return(dN.dt)
+}
+
+p_pops[1:n_plants] <- c(10, 15)
+p_traitM[1:n_plants] <- c(0.25, 0.75)
+p_traitV[1:n_plants] <- c(0.1, 0.1) #All set to be the same in Becker paper
+
+a_pops[1:n_anmials] <- c(5, 10, 20)
+a_traitM[1:n_anmials] <- c(0.1, 0.66, 0.8)
+a_traitV[1:n_anmials] <- c(0.25, 0.5, 0.1)
+
+##########This can't do multi-argument returns, but the equations should be right!
+dState.dt <- function(p_pops, a_pops, u, alpha, a_mu, p_mu){
+      plant_dt <- rep(NA, length(p_pops))
+      animal_dt <- rep(NA, length(a_pops))
+      #plants
+      competition_penalty <- 1-sum(p_pops*u[,i]) 
+      functional_pollinator_contrib <- (sum(alpha[,i]*a_pops)*p_pops[i])/(r+sum(alpha[,i]*a_pops))
+      plant_death <- p_mu[i]*p_pops[i]
+      plant_dt[i] <- r*(competition_penalty)*(functional_pollinator_contrib)-plant_death
+      
+      #animals
+      a_comp <- colSums(t(a_pops*alpha)*p_pops/((r+colSums(a_pops*alpha))))
+      animal_dt[i] <- a_comp*lambda - a_mu*a_pops
+  return(list(plant_dt, animal_dt))
+}
+
+
+output <- dState.dt(p_pops, a_pops, u, alpha, a_mu, p_mu)
+
+
+
+#Now, let's write it as a format for deSolve
+clogistic <-  function(times, y, params){ #y is state variables, params are parameters (both can be in multiples)
+  n = y[1]
+  r = params['r']
+  K = params['K']
+  dN.dt <- r*n*(1-n/K)
+  return(list(c(dN.dt)))
+}
+
+
+##Solve and Plot dN.dt and Logistic Solution
+prms <- c(r=1, K=1/0.01)
+N <- seq(0, prms['K'], by=0.1)
+
+growth.clog <- dN.dt(N, prms['r'], prms['K'])
+plot(N, growth.clog, type = 'l', xlab = 'N', ylab = 'dN.dt')
+
+# ODE solution
+init.N <- c(1)
+t.s <- seq(0.1, 15, by=0.1)
+
+out.clog = ode(y=init.N, times=t.s, clogistic, parms = prms)
+```
+
