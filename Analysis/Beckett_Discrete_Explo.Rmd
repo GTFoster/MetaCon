@@ -16,3 +16,166 @@ library(tidyverse)
 library(odin)
 ```
 
+
+Problem statement: Becker et al (2022) published a cool paper looking at changes in network properties as simulated mutualistic networks progressed through time (https://www.journals.uchicago.edu/doi/epdf/10.1086/720421). A somewhat small, but really interesting component of their model is that by the nature of the fact species can only invade areas where a mutualist partner is already present, there was a positive realtionship between dispersal and generalism.I liked that component, and thought it would be cool to look at mutualistic network assembly across a metacommunity context, where that dispersal-generalism relationship could be more explicitly enforced. 
+
+
+I'm going to start this by just trying to recreate a really simple, deterministic version of the Becker model here in R (they published their code in Mathmatica).
+
+```{r}
+n_animals <- 3
+a_pops <- vector(mode="numeric", length=n_animals) #animal population size
+a_traitM <- vector(mode="numeric", length=n_animals) #animal trait mean
+a_traitV <- vector(mode="numeric", length=n_animals) #animal trait variance
+
+n_plants <- 2
+p_pops <- vector(mode="numeric", length=n_plants) #plant population size
+p_traitM <- vector(mode="numeric", length=n_plants) #plant trait mean
+p_traitV <- vector(mode="numeric", length=n_plants) #plant trait variance
+```
+
+Make some dummy trait data. 
+```{r}
+p_pops[1:n_plants] <- c(.10, .50)
+p_traitM[1:n_plants] <- c(0.25, 0.65)
+p_traitV[1:n_plants] <- c(0.1, 0.1) #All set to be the same in Becker paper
+
+#a_pops[1:n_anmials] <- c(5, 10, 20)
+a_pops[1:n_anmials] <- c(.5, .1, .2)
+a_traitM[1:n_anmials] <- c(0.1, 0.66, 0.8)
+a_traitV[1:n_anmials] <- c(0.25, 0.5, 0.1)
+```
+
+
+Creating plant-pollinator linkage strength
+
+```{r}
+min.f1f2 <- function(x, mu1, mu2, sd1, sd2) { #Create function that describes the minimum of two overlapping normal curves
+    f1 <- dnorm(x, mean=mu1, sd=sd1)
+    f2 <- dnorm(x, mean=mu2, sd=sd2)
+    pmin(f1, f2)
+}
+alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
+
+
+for(ia in 1:n_animals){
+  for(ip in 1:n_plants){
+    alpha[ia, ip] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    }
+}
+```
+
+
+u: interspecific competition between plants (mediated by traits)
+ This takes generally the same form as the linkage strength matrix equation
+```{r}
+u <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
+
+for(p1 in 1:n_plants){
+  for(p2 in 1:n_plants){
+    u[p1, p2] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    }
+}
+table(round(diag(u), 6)==1) #Sense check; since there's perfect overlap, all diagonals should be equal to 1. 
+```
+
+## Plant Dynamics
+Becker model does some rescaling of lotka-volterra to factor our K. I'll try and do the same (will need to double check later)
+```{r}
+r <- 1.0
+mup <- .002
+p_change <- vector(mode="numeric", length=n_plants)
+  
+value <- NULL
+for(i in 1:25){ # Simulates plant dynamics over 25 generations assuming a static pollinator distributions
+for(n in 1:n_plants){
+    plantCompetition <- 1-sum(u[n,]*p_pops[n])
+    pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops))
+    plantDeath <- mup*p_pops[n]
+    
+    p_change[n] <- r*plantCompetition*pollBenefits - plantDeath
+}
+
+p_pops <- p_pops*(1+p_change)
+
+value <- rbind(value, c(index=i, pop1=p_pops[1], pop2=p_pops[2]))
+}
+
+plot(x=value[,1], y=value[,2], type="b", col="green", ylim=c(0,1))
+lines(x=value[,1], y=value[,3], type="b", col="dark green")
+```
+
+## Animal Dynamics
+
+Right now I'm doing the animal pollinator benefits in a hacky forloop. There's a smart, fast way to do this, but I'm dumb atm and can't find it. 
+```{r}
+lambda <- 0.8
+mua <- .1
+a_change <- vector(mode="numeric", length=n_animals)
+
+for(n in 1:n_animals){
+  propOfplants <- 0
+  nums <- alpha[n,]*p_pops
+  for(i in 1:n_plants){
+    #Numerator-plant reward given by each focal pollinator
+    propOfplants <- propOfplants+nums[i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
+  }
+  pollDeath <- mua*a_pops[n]
+  a_change[n] <- lambda*propOfplants - pollDeath
+}
+
+
+```
+
+
+
+
+Let's put it all together and make a dynamic system
+```{r}
+output <- data.frame(time=1, a_1=a_pops[1], a_2=a_pops[2], a_3=a_pops[3], p_1=p_pops[1], p_2=p_pops[2])
+
+for(t in 1:100){
+  for(n in 1:n_animals){
+    propOfplants <- 0
+    nums <- alpha[n,]*p_pops
+    for(i in 1:n_plants){
+      #Numerator-plant reward given by each focal pollinator
+      propOfplants <- propOfplants+nums[i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
+    }
+    pollDeath <- mua*a_pops[n]
+    a_change[n] <- lambda*propOfplants - pollDeath
+  } #Animal Growth Rate
+  
+  p_change <- vector(mode="numeric", length=n_plants) #Plant growth rate
+  value <- NULL
+  browser()
+  for(n in 1:n_plants){
+      plantCompetition <- 1-sum(u[n,]*p_pops[n])
+      pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops))
+      plantDeath <- mup*p_pops[n]
+      
+      p_change[n] <- r*plantCompetition*pollBenefits - plantDeath
+  }
+  
+  p_pops <- p_pops*(1+p_change)
+  
+  value <- rbind(value, c(index=i, pop1=p_pops[1], pop2=p_pops[2]))
+
+  
+  a_pops <- (a_change+1)*a_pops #Update Animal population
+  p_pops <- p_pops*(1+p_change) #Update Plant population
+  
+  
+  output <- rbind(output, c(time=t+1, a_1=a_pops[1], a_2=a_pops[2], a_3=a_pops[3], p_1=p_pops[1], p_2=p_pops[2]))
+}
+```
+
+
+```{r}
+plot(x=output$time, y=output$a_1, col="pink")
+points(x=output$time, y=output$a_2, col="red")
+points(x=output$time, y=output$a_3, col="dark red")
+points(x=output$time, y=output$p_1, col="green")
+points(x=output$time, y=output$p_1, col="dark green")
+```
+
