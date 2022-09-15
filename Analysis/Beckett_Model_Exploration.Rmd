@@ -26,7 +26,7 @@ p_traitM <- vector(mode="numeric", length=n_plants) #plant trait mean
 p_traitV <- vector(mode="numeric", length=n_plants) #plant trait variance
 ```
 
-Make some dummy trait data
+Make some dummy trait data. 
 ```{r}
 p_pops[1:n_plants] <- c(10, 15)
 p_traitM[1:n_plants] <- c(0.25, 0.75)

@@ -1,0 +1,92 @@
+---
+title: "alpha scratch"
+author: "Grant Foster"
+date: "7/28/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+tp <- 0.5
+ta <- 0.6
+sp <- 0.25
+sa <- 0.1
+dnorm(x=seq(-2, 2, by=0.1), mean=tp, sd=sp)
+
+c1 <- (ta*(sp^2) - sa*(tp*sa + sp*(sqrt((tp-ta)^2 + 2*(sp^2-sa^2)*log(sp/sa)))))/(sp^2-sa^2)
+
+c2 <- (tp*(sa^2) - sp*(ta*sp + sa*(sqrt((ta-tp)^2 + 2*(sa^2-sp^2)*log(sa/sp)))))/(sa^2-sp^2)
+
+
+
+
+
+
+plot(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=tp, sd=sp), type = "l", col="dark green", ylab="density", xlab="value", ylim=c(0,5))
+lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=ta, sd=sa), type = "l", col="red")
+points(x=c1, y=dnorm(c1, mean=tp, sd=sp), col="dark green")
+points(x=c1, y=dnorm(c1, mean=ta, sd=sa), col="red")
+points(x=c2, y=dnorm(c2, mean=ta, sd=sa), col="red")
+points(x=c2, y=dnorm(c2, mean=tp, sd=sp), col="dark green")
+
+dnorm(c1, mean=tp, sd=sp)
+dnorm(c1, mean=ta, sd=sa)
+
+
+
+(c2-c1)*dnorm(c1, mean=ta, sd=sa) + (c2-c1)*(dnorm(c2, mean=ta, sd=sa)-dnorm(c1, mean=ta, sd=sa))*.5
+
+
+```
+Trying the Becker equation
+```{r}
+A <- sqrt(2*pi)^-1
+alpha <- (A/sa)*exp((-1*(ta-tp)^2)/sa^2)
+
+exp((-1*(ta-tp)^2)/sa^2)
+
+
+pnorm(c1, mean=tp, sd=sp, lower.tail = FALSE) - pnorm(c2, mean=tp, sd=sp, lower.tail = FALSE)
+
+
+```
+
+```{r}
+min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
+    f1 <- dnorm(x, mean=mu1, sd=sd1)
+    f2 <- dnorm(x, mean=mu2, sd=sd2)
+    pmin(f1, f2)
+}
+
+mu1 <- 2;    sd1 <- 2
+mu2 <- 1;    sd2 <- 1
+
+xs <- seq(min(mu1 - 3*sd1, mu2 - 3*sd2), max(mu1 + 3*sd1, mu2 + 3*sd2), .01)
+f1 <- dnorm(xs, mean=mu1, sd=sd1)
+f2 <- dnorm(xs, mean=mu2, sd=sd2)
+
+plot(xs, f1, type="l", ylim=c(0, max(f1,f2)), ylab="density")
+lines(xs, f2, lty="dotted")
+ys <- min.f1f2(xs, mu1=mu1, mu2=mu2, sd1=sd1, sd2=sd2)
+xs <- c(xs, xs[1])
+ys <- c(ys, ys[1])
+polygon(xs, ys, col="gray")
+
+### only works for sd1 = sd2
+SMD <- (mu1-mu2)/sd1
+2 * pnorm(-abs(SMD)/2)
+
+
+tp <- 0.5
+ta <- 0.6
+sp <- 0.25
+sa <- 0.1
+
+
+### this works in general
+integrate(min.f1f2, -Inf, Inf, mu1=tp, mu2=ta, sd1=sp, sd2=sa)
+```
+
