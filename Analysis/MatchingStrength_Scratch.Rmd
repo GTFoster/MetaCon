@@ -21,10 +21,6 @@ c1 <- (ta*(sp^2) - sa*(tp*sa + sp*(sqrt((tp-ta)^2 + 2*(sp^2-sa^2)*log(sp/sa)))))
 c2 <- (tp*(sa^2) - sp*(ta*sp + sa*(sqrt((ta-tp)^2 + 2*(sa^2-sp^2)*log(sa/sp)))))/(sa^2-sp^2)
 
 
-
-
-
-
 plot(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=tp, sd=sp), type = "l", col="dark green", ylab="density", xlab="value", ylim=c(0,5))
 lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=ta, sd=sa), type = "l", col="red")
 points(x=c1, y=dnorm(c1, mean=tp, sd=sp), col="dark green")
@@ -88,5 +84,7 @@ sa <- 0.1
 
 ### this works in general
 integrate(min.f1f2, -Inf, Inf, mu1=tp, mu2=ta, sd1=sp, sd2=sa)
+
+
 ```
 
