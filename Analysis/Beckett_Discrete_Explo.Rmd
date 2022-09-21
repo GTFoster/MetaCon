@@ -41,10 +41,10 @@ p_pops[1:n_plants] <- c(.10, .05, 0.25)
 p_traitM[1:n_plants] <- c(0.25, 0.99, 0.5)
 p_traitV[1:n_plants] <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
 
-#a_pops[1:n_anmials] <- c(5, 10, 20)
-a_pops[1:n_anmials] <- c(.5, .1, .2)
-a_traitM[1:n_anmials] <- c(0.1, 0.66, 0.8)
-a_traitV[1:n_anmials] <- c(0.25, 0.5, 0.1)
+#a_pops[1:n_animals] <- c(5, 10, 20)
+a_pops[1:n_animals] <- c(.5, .1, .2)
+a_traitM[1:n_animals] <- c(0.1, 0.66, 0.8)
+a_traitV[1:n_animals] <- c(0.25, 0.5, 0.1)
 ```
 
 
@@ -188,13 +188,13 @@ p_traitM[1:n_plants] <- c(0.25, 0.99, 0.5)
 p_traitV[1:n_plants] <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
 
 #a_pops[1:n_anmials] <- c(5, 10, 20)
-a_pops[1:n_anmials] <- c(.5, .1, .2)
-a_traitM[1:n_anmials] <- c(0.1, 0.66, 0.8)
-a_traitV[1:n_anmials] <- c(0.25, 0.5, 0.1)
+a_pops[1:n_animals] <- c(.5, .1, .2)
+a_traitM[1:n_animals] <- c(0.1, 0.66, 0.8)
+a_traitV[1:n_animals] <- c(0.25, 0.5, 0.1)
 ```
 
 ```{r}
-o <- 0.1 #Noise strength
+o <- 0.5 #Noise strength
 
 output_s <- data.frame(time=1, a_1=a_pops[1], a_2=a_pops[2], a_3=a_pops[3], p_1=p_pops[1], p_2=p_pops[2], p_3=p_pops[3])
 
@@ -238,4 +238,14 @@ lines(x=output_s$time, y=output_s$p_1, col="green")
 lines(x=output_s$time, y=output_s$p_2, col="dark green")
 lines(x=output_s$time, y=output_s$p_3, col="grey")
 ```
+
+```{r}
+vignette("lotka_predator_prey", package = "GillespieSSA")
+```
+ 
+ 
+```{r}
+
+```
+
 
