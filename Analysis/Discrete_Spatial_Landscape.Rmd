@@ -1,0 +1,168 @@
+---
+title: "Discrete_Spatial_Landscape"
+output: html_document
+date: "2022-12-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(magrittr)
+library(tidyverse)
+library(scales)
+```
+
+Initial conditions
+
+Familiar from previous versions, but now we're looking across a set of 10 connected patches. 
+```{r}
+nsites <- 10
+coords <- data.frame(x=runif(nsites), y=runif(nsites))
+x_coords <- runif(nsites)
+y_coords <- runif(nsites)
+
+eucdist <- dist(coords, diag=T)
+dexpdist <- dexp(eucdist, rate=5)
+```
+
+```{r}
+n_plants <- 3
+n_animals <- 5
+
+
+p_pops <- matrix(data=round(runif(nsites*n_plants, 1, 200)), nrow=nsites, ncol=n_plants) #now, our pops are a matrix instead of a vector in order to track across multiple sites
+p_traitM <- c(0.25, 0.99, 0.5)
+p_traitV <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
+
+
+a_pops <- matrix(data=round(runif(nsites*n_animals, 1, 200)), nrow=nsites, ncol=n_animals)
+a_traitM <- runif(n_animals, 0, 1)
+a_traitV <- runif(n_animals, 0, .25)
+```
+
+Parameters
+```{r}
+r <- 0.5
+mup <- .2
+mua <- 0.2
+o <- 0.1
+lambda <- 0.8
+K <- 100
+e_thresh <- 2
+invade_size <- 5
+
+
+min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
+    f1 <- dnorm(x, mean=mu1, sd=sd1)
+    f2 <- dnorm(x, mean=mu2, sd=sd2)
+    pmin(f1, f2)
+}
+```
+
+#####Start Here: Figure out how to flexibly keep track of individual species as they enter the community/go extinct
+
+```{r}
+num_timeSteps <- 10
+p_rich <- NULL
+a_rich <- NULL
+WmeanV <- NULL
+meanV <- NULL
+
+for(t in 1:num_timeSteps){
+  #p_rich <- rbind(p_rich, n_plants)
+  #a_rich <- rbind(a_rich, n_animals)
+  #Check if community is same as in t-1
+    #if so; recalculate A and u
+  alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
+  for(ia in 1:n_animals){
+    for(ip in 1:n_plants){
+    alpha[ia, ip] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    }
+  }
+  alpha[alpha<0.05] <- 0
+  
+  u <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
+  
+  for(p1 in 1:n_plants){
+    for(p2 in 1:n_plants){
+      u[p1, p2] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+      }
+  }
+  #Find out dpop/dt
+  a_change <- matrix(data=NA, nrow=nsites, ncol=n_animals)
+    for(n in 1:n_animals){
+    propOfplants <- 0
+    nums <- alpha[n,]*p_pops#[,site]
+    for(i in 1:n_plants){
+      #Numerator-plant reward given by each focal pollinator
+      propOfplants <- propOfplants+nums[,i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
+    }
+    pollDeath <- mua
+    a_change[,n] <- lambda*propOfplants - pollDeath
+  } #Animal Growth Rate
+  
+  p_change <- matrix(data=NA, nrow=nsites, ncol=n_plants)
+  for(n in 1:n_plants){
+      plantCompetition <- (K-rowSums(t(u[n,]*t(p_pops))))/K#(K-sum(u[n,]*p_pops[n,]))/K
+      #pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops)) #NOTE: THIS IS MORE SIMILIAR TO BECKER. NOt sure why their p_pop is included here. 
+      pollBenefits <-rowSums(t(alpha[,n]*t(a_pops)))/(r+rowSums(t(alpha[,n]*t(a_pops))))
+      plantDeath <- mup
+      p_change[,n] <- r*plantCompetition*pollBenefits - plantDeath# + o*rnorm(n=1, mean=0, sd=0.1) 
+  }
+  #############START HERE: WORK ON PROJECTING TO t+1
+  #Project to t+1
+  for(i in 1:n_plants){
+    p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_change[i])) #Poisson birth process for plants
+  }
+  #p_pops <- p_pops*(1+p_change)
+  #a_pops <- (a_change+1)*a_pops #Update Animal population
+  for(i in 1:n_animals){
+    a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
+  }
+  #Extinction?
+  if(length(p_pops[p_pops<=e_thresh])>0){
+    print("plant extinction")
+  }
+    #Plant Extinction
+    p_pops <- p_pops[which(p_pops>e_thresh)]
+    p_traitM <- p_traitM[which(p_pops>e_thresh)]
+    p_traitV <- p_traitV[which(p_pops>e_thresh)]
+    #Animal Extinction
+      if(length(a_pops[a_pops<=e_thresh])>0){
+    print("animal extinction")
+  }
+    a_pops <- a_pops[which(a_pops>e_thresh)]
+    a_traitM <- a_traitM[which(a_pops>e_thresh)]
+    a_traitV <- a_traitV[which(a_pops>e_thresh)]  
+  #Do we invade? 
+    #if(rbinom(1, 1, 0.05)==1){
+      #print("invasion")
+  #    invasion <- runif(1)
+  #    if(invasion >=0.5){
+  #      print("plant invades")
+  #      p_pops <- c(p_pops, invade_size) #new pop always invades at 0.1
+  #      p_traitM <- c(p_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
+  #      p_traitV <- c(p_traitV, 0.1) #All set to be the same in Becker paper
+  #  }else{
+  #    print("pollinator invades")
+  #    a_pops <- c(a_pops, invade_size) #new pop always invades at 0.1
+  #    a_traitM <- c(a_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
+  #    a_traitV <- c(a_traitV, runif(1, 0, 0.5)) #Same for new trait variance
+  #  }
+  #  }
+  n_animals <- length(a_pops)
+  n_plants <- length(p_pops)
+    
+  if(n_animals < 1| n_plants < 1){
+    print("Network breakdown")
+      break
+    }
+  #print(paste("polls=", n_animals, sep=""))
+  #WmeanV <- rbind(WmeanV, sum((a_pops*a_traitV))/sum(a_pops))
+  #meanV <- rbind(meanV, sum(a_traitV)/n_animals)
+  #if(t %% 100==0)
+  print(t)
+}
+```
