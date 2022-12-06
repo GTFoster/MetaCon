@@ -205,7 +205,6 @@ init.N <- c(150)
 t.s <- seq(0.1, 15, by=0.1)
 
 out.clog = ode(y=init.N, times=t.s, clogistic, parms = prms)
-
 ```
 
 ```{r}
@@ -219,22 +218,22 @@ LV_comp <- function(t, pops, params){
   list(dNdt)
 }
 alpha12 <- 0.75
-alpha21 <- 1.8
+alpha21 <- 0.9
 
 LV_compSimp <- function(t, pops, params){
   dp1dt <- 2.0*(1-((pops[1]+pops[2]*alpha12)/200))
   dp2dt <- 2.0*(1-((pops[2]+pops[1]*alpha21)/200))
-  dpopdt <-list(c(dp1dt, dp2dt))
-  return(dpopdt)
+  dpopdt <-c(dp1dt, dp2dt)
+  list(dpopdt)
 }
 
-
-LV_compSimp(t=NA, pops=c(300, 50), params=prms)
+rm(pops)
+LV_compSimp(t=NA, pops=c(120, 0), params=prms)
 LV_compSimp(t=NA, pops=c(2, 50), params=prms)
 
 
 
-init.N <- c(100, 100)
+init.N <- c(20, 300)
 t.s <- seq(0.1, 1500, by=0.1)
 outSmall <- deSolve::ode(y=init.N, times=t.s, LV_compSimp, parms = prms)
 plot(x=outSmall[,1], y=outSmall[,2], col="red", type="l", ylim=c(0,300))
@@ -333,5 +332,10 @@ for(t in 1:num_timeSteps){
   p_pops <- p_pops*(1+p_change)
   a_pops <- (a_change+1)*a_pops #Update Animal population
 }
+```
+
+ODE version of stuff
+```{r}
+
 ```
 

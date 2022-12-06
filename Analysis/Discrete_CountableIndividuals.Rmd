@@ -9,29 +9,40 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(scales)
+library(tidyverse)
+```
+
 Initial conditions
 
 ```{r}
 n_plants <- 3
-n_animals <- 3
+n_animals <- 10
 
-p_pops <- c(.10, .05, 0.25)
+p_pops <- c(100, 500, 200)/10
 p_traitM <- c(0.25, 0.99, 0.5)
 p_traitV <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
 
-#a_pops[1:n_animals] <- c(5, 10, 20)
-a_pops <- c(.5, .1, .2)
-a_traitM <- c(0.1, 0.66, 0.8)
-a_traitV <- c(0.25, 0.5, 0.1)
+a_pops <- c(50, 100, 200, 100, 300, 670, 420, 78, 460, 92)/10
+#a_pops <- c(0, 0, 0)
+#a_pops <- c(.5, .1, .2)
+a_traitM <- runif(10, 0, 1)
+a_traitV <- runif(10, 0, .5)
+#a_traitM <- c(0.2, 0.66, 0.8)
+#a_traitV <- c(0.25, 0.5, 0.1)
 ```
 
 Parameters
 ```{r}
-r <- 1.0
+r <- 0.5
 mup <- .2
 mua <- 0.2
 o <- 0.1
-lambda <- 0.5
+lambda <- 0.8
+K <- 100
+e_thresh <- 2
+invade_size <- 5
 
 
 min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
@@ -44,7 +55,7 @@ min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
 #####Start Here: Figure out how to flexibly keep track of individual species as they enter the community/go extinct
 
 ```{r}
-num_timeSteps <- 200
+num_timeSteps <- 500
 p_rich <- NULL
 a_rich <- NULL
 WmeanV <- NULL
@@ -79,80 +90,100 @@ for(t in 1:num_timeSteps){
       #Numerator-plant reward given by each focal pollinator
       propOfplants <- propOfplants+nums[i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
     }
-    pollDeath <- mua*a_pops[n]
-    a_change[n] <- lambda*propOfplants - pollDeath + o*rnorm(n=1, mean=0, sd=0.1)+o*rnorm(n=1, mean=0, sd=0.1)
+    pollDeath <- mua
+    a_change[n] <- lambda*propOfplants - pollDeath# + o*rnorm(n=1, mean=0, sd=0.1)+o*rnorm(n=1, mean=0, sd=0.1)
   } #Animal Growth Rate
   
   p_change <- vector(mode="numeric", length=n_plants) #Plant growth rate
   for(n in 1:n_plants){
-      plantCompetition <- 1-sum(u[n,]*p_pops[n])
-      pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops))
-      plantDeath <- mup*p_pops[n]
-      
-      p_change[n] <- r*plantCompetition*pollBenefits - plantDeath + o*rnorm(n=1, mean=0, sd=0.1) 
+      plantCompetition <- (K-sum(u[n,]*p_pops[n]))/K
+      #pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops)) #NOTE: THIS IS MORE SIMILIAR TO BECKER. NOt sure why their p_pop is included here. 
+      pollBenefits <-sum(alpha[,n]*a_pops)/(r+sum(alpha[,n]*a_pops))
+      plantDeath <- mup
+      p_change[n] <- r*plantCompetition*pollBenefits - plantDeath# + o*rnorm(n=1, mean=0, sd=0.1) 
   }
   #Project to t+1
-  p_pops <- p_pops*(1+p_change)
-  a_pops <- (a_change+1)*a_pops #Update Animal population
+  for(i in 1:n_plants){
+    p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_change[i])) #Poisson birth process for plants
+  }
+  #p_pops <- p_pops*(1+p_change)
+  #a_pops <- (a_change+1)*a_pops #Update Animal population
+  for(i in 1:n_animals){
+    a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
+  }
   #Extinction?
-  if(length(p_pops[p_pops<0.05])>0){
+  if(length(p_pops[p_pops<=e_thresh])>0){
     print("plant extinction")
   }
     #Plant Extinction
-    p_pops <- p_pops[which(p_pops>0.05)]
-    p_traitM <- p_traitM[which(p_pops>0.05)]
-    p_traitV <- p_traitV[which(p_pops>0.05)]
+    p_pops <- p_pops[which(p_pops>e_thresh)]
+    p_traitM <- p_traitM[which(p_pops>e_thresh)]
+    p_traitV <- p_traitV[which(p_pops>e_thresh)]
     #Animal Extinction
-      if(length(a_pops[a_pops<0.05])>0){
+      if(length(a_pops[a_pops<=e_thresh])>0){
     print("animal extinction")
   }
-    a_pops <- a_pops[which(a_pops>0.05)]
-    a_traitM <- a_traitM[which(a_pops>0.05)]
-    a_traitV <- a_traitV[which(a_pops>0.05)]  
+    a_pops <- a_pops[which(a_pops>e_thresh)]
+    a_traitM <- a_traitM[which(a_pops>e_thresh)]
+    a_traitV <- a_traitV[which(a_pops>e_thresh)]  
   #Do we invade? 
     if(rbinom(1, 1, 0.05)==1){
       #print("invasion")
       invasion <- runif(1)
       if(invasion >=0.5){
         print("plant invades")
-        p_pops <- c(p_pops, 0.1) #new pop always invades at 0.1
+        p_pops <- c(p_pops, invade_size) #new pop always invades at 0.1
         p_traitM <- c(p_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
         p_traitV <- c(p_traitV, 0.1) #All set to be the same in Becker paper
     }else{
       print("pollinator invades")
-      a_pops <- c(a_pops, 0.1) #new pop always invades at 0.1
+      a_pops <- c(a_pops, invade_size) #new pop always invades at 0.1
       a_traitM <- c(a_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
-      a_traitV <- c(a_traitV, runif(1)) #Same for new trait variance
+      a_traitV <- c(a_traitV, runif(1, 0, 0.5)) #Same for new trait variance
     }
     }
   n_animals <- length(a_pops)
   n_plants <- length(p_pops)
     
   if(n_animals < 1| n_plants < 1){
+    print("Network breakdown")
       break
     }
-  
-  WmeanV <- rbind(WmeanV, sum((a_pops*a_traitV))/n_animals)
+  #print(paste("polls=", n_animals, sep=""))
+  WmeanV <- rbind(WmeanV, sum((a_pops*a_traitV))/sum(a_pops))
   meanV <- rbind(meanV, sum(a_traitV)/n_animals)
+  if(t %% 100==0)
+  print(t)
 }
 ```
 
 ```{r}
-plot(x=1:length(p_rich), y=p_rich, type="l", col="dark green", ylim=c(0,20))
+plot(x=1:length(p_rich), y=p_rich, type="l", col="dark green", ylim=c(0,max(p_rich, a_rich)))
 lines(x=1:length(a_rich), y=a_rich, type="l", col="dark red")
 
 plot(x=1:length(WmeanV), y=WmeanV, type="l", xlab="time", ylab="Mean Niche Breadth Weighted By Abundance")
-lines(x=1:length(meanV), y=meanV, type="l")
+#lines(x=1:length(meanV), y=meanV, type="l")
 ```
 
 ```{r}
-
-plot(x=NA, y=NA, xlim=c(-1.5,1.5), ylim=c(0,10))
+plot(x=NA, y=NA, xlim=c(-0.75,1.75), ylim=c(0,2), xlab="trait value", ylab="Relative mean density")
 for(i in 1:length(a_traitM)){
-  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=a_traitM[i], sd=a_traitV[i]), col="dark red")
+  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=a_traitM[i], sd=a_traitV[i])/max(dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i])), col=alpha("dark red", 0.3))
 }
 for(i in 1:length(p_traitM)){
-  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i]), col="dark green")
+  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i])/max(dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i])), col=alpha("dark green", 0.3))
 }
+
+a_den <- rep(0, length=length(seq(-2, 2, by=0.01)))
+for(i in 1:length(a_traitM)){
+  a_den <- a_den+ dnorm(x=seq(-2, 2, by=0.01), mean=a_traitM[i], sd=a_traitV[i])
+}
+lines(x=seq(-2, 2, by=0.01), y=a_den/max(a_den), col="red", lwd=3)
+
+p_den <- rep(0, length=length(seq(-2, 2, by=0.01)))
+for(i in 1:length(p_traitM)){
+  p_den <- p_den+ dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i])
+}
+lines(x=seq(-2, 2, by=0.01), y=p_den/max(p_den), col="green", lwd=3)
 ```
 

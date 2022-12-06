@@ -243,9 +243,6 @@ lines(x=output_s$time, y=output_s$p_3, col="grey")
 vignette("lotka_predator_prey", package = "GillespieSSA")
 ```
  
- 
-```{r}
 
-```
 
 
