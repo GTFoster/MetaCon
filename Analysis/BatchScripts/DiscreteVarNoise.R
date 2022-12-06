@@ -1,4 +1,11 @@
 output <- NULL
+min.f1f2 <- function(x, mu1, mu2, sd1, sd2) { #Create function that describes the minimum of two overlapping normal curves
+  f1 <- dnorm(x, mean=mu1, sd=sd1)
+  f2 <- dnorm(x, mean=mu2, sd=sd2)
+  pmin(f1, f2)
+}
+
+
 for(q in 1:200){
   n_plants <- 3
   n_animals <- 3

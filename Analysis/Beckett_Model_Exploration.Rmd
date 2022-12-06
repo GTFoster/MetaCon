@@ -201,9 +201,137 @@ growth.clog <- dN.dt(N, prms['r'], prms['K'])
 plot(N, growth.clog, type = 'l', xlab = 'N', ylab = 'dN.dt')
 
 # ODE solution
-init.N <- c(1)
+init.N <- c(150)
 t.s <- seq(0.1, 15, by=0.1)
 
 out.clog = ode(y=init.N, times=t.s, clogistic, parms = prms)
+
+```
+
+```{r}
+N_pops <- c(50, 100)
+A <- matrix(c(1, 50, 0.01, 1), ncol=2)
+
+r <- 1.5*(K-rowSums(N_pops*A))/K
+
+LV_comp <- function(t, pops, params){
+  dNdt <- params["r"]*(params["K"]-rowSums(pops*A))/params["K"]
+  list(dNdt)
+}
+alpha12 <- 0.75
+alpha21 <- 1.8
+
+LV_compSimp <- function(t, pops, params){
+  dp1dt <- 2.0*(1-((pops[1]+pops[2]*alpha12)/200))
+  dp2dt <- 2.0*(1-((pops[2]+pops[1]*alpha21)/200))
+  dpopdt <-list(c(dp1dt, dp2dt))
+  return(dpopdt)
+}
+
+
+LV_compSimp(t=NA, pops=c(300, 50), params=prms)
+LV_compSimp(t=NA, pops=c(2, 50), params=prms)
+
+
+
+init.N <- c(100, 100)
+t.s <- seq(0.1, 1500, by=0.1)
+outSmall <- deSolve::ode(y=init.N, times=t.s, LV_compSimp, parms = prms)
+plot(x=outSmall[,1], y=outSmall[,2], col="red", type="l", ylim=c(0,300))
+lines(x=outSmall[,1], y=outSmall[,3], col="blue")
+
+params <- c(r=2.5, K=200)
+prms <- c(r=2, K=1/0.005)
+out.LV = ode(y=init.N, times=t.s, LV_compSimp, parms = prms)
+plot(outSmall)
+```
+
+```{r}
+closed.sir.model <- function (t, x, params){
+  ## first extract the state variables
+  S <- x[1]
+  I <- x[2]
+  R <- x[3]
+  ## now extract the parameters
+  beta <- params["beta"]
+  gamma <- params["gamma"]
+  N <- S+I+R
+  ## now code the model equations
+  dSdt <- -beta*S*I/N
+  dIdt <- beta*S*I/N-gamma*I
+  dRdt <- gamma*I
+  ## combine results into a single vector
+  dxdt <- c(dSdt,dIdt,dRdt)
+  ## return result as a list!
+  list(dxdt)
+}
+parms <- c(beta=400,gamma=365/13)
+times <- seq(from=0,to=60/365,by=1/365/4)
+xstart <- c(S=999,I=1,R=0)
+
+ode(
+  func=closed.sir.model,
+  y=xstart,
+  times=times,
+  parms=parms
+) %>%
+  as.data.frame() -> out
+
+out %>%
+  gather(variable,value,-time) %>%
+  ggplot(aes(x=time,y=value,color=variable))+
+  geom_line(size=2)+
+  theme_classic()+
+  labs(x='time (yr)',y='number of individuals')
+```
+
+
+
+```{r}
+for(t in 1:num_timeSteps){
+  p_rich <- rbind(p_rich, n_plants)
+  a_rich <- rbind(a_rich, n_animals)
+  #Check if community is same as in t-1
+    #if so; recalculate A and u
+  alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
+  for(ia in 1:n_animals){
+    for(ip in 1:n_plants){
+    alpha[ia, ip] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    }
+  }
+  alpha[alpha<0.05] <- 0
+  
+  u <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
+  
+  for(p1 in 1:n_plants){
+    for(p2 in 1:n_plants){
+      u[p1, p2] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+      }
+  }
+  #Find out dpop/dt
+  a_change <- vector(mode="numeric", length=n_animals) #Plant growth rate
+    for(n in 1:n_animals){
+    propOfplants <- 0
+    nums <- alpha[n,]*p_pops
+    for(i in 1:n_plants){
+      #Numerator-plant reward given by each focal pollinator
+      propOfplants <- propOfplants+nums[i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
+    }
+    pollDeath <- mua*a_pops[n]
+    a_change[n] <- lambda*propOfplants - pollDeath + o*rnorm(n=1, mean=0, sd=0.1)+o*rnorm(n=1, mean=0, sd=0.1)
+  } #Animal Growth Rate
+  
+  p_change <- vector(mode="numeric", length=n_plants) #Plant growth rate
+  for(n in 1:n_plants){
+      plantCompetition <- 1-sum(u[n,]*p_pops[n])
+      pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops))
+      plantDeath <- mup*p_pops[n]
+      
+      p_change[n] <- r*plantCompetition*pollBenefits - plantDeath + o*rnorm(n=1, mean=0, sd=0.1) 
+  }
+  #Project to t+1
+  p_pops <- p_pops*(1+p_change)
+  a_pops <- (a_change+1)*a_pops #Update Animal population
+}
 ```
 
