@@ -28,8 +28,8 @@ dexpdist <- dexp(eucdist, rate=5)
 ```
 
 ```{r}
-n_plants <- 3
-n_animals <- 5
+n_plants <- 2
+n_animals <- 2
 
 
 p_pops <- matrix(data=round(runif(nsites*n_plants, 1, 200)), nrow=nsites, ncol=n_plants) #now, our pops are a matrix instead of a vector in order to track across multiple sites
@@ -64,12 +64,13 @@ min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
 #####Start Here: Figure out how to flexibly keep track of individual species as they enter the community/go extinct
 
 ```{r}
-num_timeSteps <- 10
+num_timeSteps <- 50
 p_rich <- NULL
 a_rich <- NULL
 WmeanV <- NULL
 meanV <- NULL
 
+pops <- NULL
 for(t in 1:num_timeSteps){
   #p_rich <- rbind(p_rich, n_plants)
   #a_rich <- rbind(a_rich, n_animals)
@@ -113,30 +114,33 @@ for(t in 1:num_timeSteps){
   }
   #############START HERE: WORK ON PROJECTING TO t+1
   #Project to t+1
-  for(i in 1:n_plants){
-    p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_change[i])) #Poisson birth process for plants
+  for(i in 1:(n_plants*nsites)){
+    #p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_chan$ge[i])) #Poisson birth process for plants
+    p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_change[i]))
+    #browser()
+    #p_pops[i] <- temp
   }
   #p_pops <- p_pops*(1+p_change)
   #a_pops <- (a_change+1)*a_pops #Update Animal population
-  for(i in 1:n_animals){
+  for(i in 1:(n_animals*nsites)){
     a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
   }
   #Extinction?
-  if(length(p_pops[p_pops<=e_thresh])>0){
-    print("plant extinction")
+  if(length(colSums(p_pops)[colSums(p_pops)<=e_thresh])>0){
+    print("global plant extinction")
   }
     #Plant Extinction
-    p_pops <- p_pops[which(p_pops>e_thresh)]
-    p_traitM <- p_traitM[which(p_pops>e_thresh)]
-    p_traitV <- p_traitV[which(p_pops>e_thresh)]
+    p_traitM <- p_traitM[which(colSums(p_pops)>e_thresh)] #Remove trait values from globally exinct plants
+    p_traitV <- p_traitV[which(colSums(p_pops)>e_thresh)]
+    p_pops <- p_pops[,which(colSums(p_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
     #Animal Extinction
-      if(length(a_pops[a_pops<=e_thresh])>0){
-    print("animal extinction")
+  if(length(colSums(a_pops)[colSums(a_pops)<=e_thresh])>0){
+    print("global animal extinction")
   }
-    a_pops <- a_pops[which(a_pops>e_thresh)]
-    a_traitM <- a_traitM[which(a_pops>e_thresh)]
-    a_traitV <- a_traitV[which(a_pops>e_thresh)]  
-  #Do we invade? 
+    a_traitM <- a_traitM[which(colSums(a_pops)>e_thresh)] #Remove trait values from globally exinct plants
+    a_traitV <- a_traitV[which(colSums(a_pops)>e_thresh)]
+    a_pops <- a_pops[,which(colSums(a_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
+  #Do we invade? $
     #if(rbinom(1, 1, 0.05)==1){
       #print("invasion")
   #    invasion <- runif(1)
@@ -152,8 +156,8 @@ for(t in 1:num_timeSteps){
   #    a_traitV <- c(a_traitV, runif(1, 0, 0.5)) #Same for new trait variance
   #  }
   #  }
-  n_animals <- length(a_pops)
-  n_plants <- length(p_pops)
+  n_animals <- ncol(a_pops)
+  n_plants <- ncol(p_pops)
     
   if(n_animals < 1| n_plants < 1){
     print("Network breakdown")
@@ -163,6 +167,22 @@ for(t in 1:num_timeSteps){
   #WmeanV <- rbind(WmeanV, sum((a_pops*a_traitV))/sum(a_pops))
   #meanV <- rbind(meanV, sum(a_traitV)/n_animals)
   #if(t %% 100==0)
+  
+  a_pops
+  
+  pops_temp <- data.frame(animals=a_pops, plants=p_pops, site=1:10, time=t)
+  pops <- rbind(pops, pops_temp)
   print(t)
 }
 ```
+
+```{r}
+colnames(pops)
+poplong <- pivot_longer(pops, cols = 1:(n_plants+n_animals), names_to="species", values_to = "popsize")
+ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#006600", "#006633"))+facet_wrap("site")
+
+
+
+#ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#CC0000", "#FF0000", "#FF3333", "#006600", "#006633", "#193300"))+facet_wrap("site")
+```
+
