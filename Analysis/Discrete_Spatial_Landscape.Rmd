@@ -18,23 +18,38 @@ Initial conditions
 
 Familiar from previous versions, but now we're looking across a set of 10 connected patches. 
 ```{r}
-nsites <- 10
+nsites <- 5
+factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
 coords <- data.frame(x=runif(nsites), y=runif(nsites))
-x_coords <- runif(nsites)
-y_coords <- runif(nsites)
+eucdist <- dist(coords, diag=T, upper=T)
+dexpdist <- dexp(eucdist, rate=10)
+dexpsim <- 1/(1+as.matrix(dexpdist)) #Converting our distance matrix to a similarity score (easier for me to then turn into a pmf).
+#Found this particular metric from here: https://stats.stackexchange.com/questions/158279/how-i-can-convert-distance-euclidean-to-similarity-score
+```
 
-eucdist <- dist(coords, diag=T)
-dexpdist <- dexp(eucdist, rate=5)
+Visualizing sites
+
+```{r}
+plot(x=coords$x, y=coords$y, xlim=c(0,1), ylim=c(0,1))
+for(i in 1:nsites){
+  for(j in 1:nsites){
+    if(i !=j ){
+        segments(coords$x[i], coords$y[i], coords$x[j], coords$y[j], lwd=as.matrix(dexpdist)[i,j])
+    }
+  }
+}
 ```
 
 ```{r}
-n_plants <- 2
-n_animals <- 2
+n_plants <- 5
+n_animals <- 5
 
 
 p_pops <- matrix(data=round(runif(nsites*n_plants, 1, 200)), nrow=nsites, ncol=n_plants) #now, our pops are a matrix instead of a vector in order to track across multiple sites
-p_traitM <- c(0.25, 0.99, 0.5)
-p_traitV <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
+p_traitM <- runif(n_plants, 0, 1)
+p_traitV <- runif(n_plants, 0, .25)
+#p_traitM <- c(0.25, 0.99, 0.5)
+#p_traitV <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
 
 
 a_pops <- matrix(data=round(runif(nsites*n_animals, 1, 200)), nrow=nsites, ncol=n_animals)
@@ -45,13 +60,14 @@ a_traitV <- runif(n_animals, 0, .25)
 Parameters
 ```{r}
 r <- 0.5
-mup <- .2
-mua <- 0.2
+mup <- .1
+mua <- 0.35
 o <- 0.1
 lambda <- 0.8
 K <- 100
 e_thresh <- 2
 invade_size <- 5
+disprob <- 0.2
 
 
 min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
@@ -64,7 +80,7 @@ min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
 #####Start Here: Figure out how to flexibly keep track of individual species as they enter the community/go extinct
 
 ```{r}
-num_timeSteps <- 50
+num_timeSteps <- 100
 p_rich <- NULL
 a_rich <- NULL
 WmeanV <- NULL
@@ -80,6 +96,7 @@ for(t in 1:num_timeSteps){
   for(ia in 1:n_animals){
     for(ip in 1:n_plants){
     alpha[ia, ip] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    #print(paste("ia=", ia, "; ip=", ip, sep=""))
     }
   }
   alpha[alpha<0.05] <- 0
@@ -112,23 +129,52 @@ for(t in 1:num_timeSteps){
       plantDeath <- mup
       p_change[,n] <- r*plantCompetition*pollBenefits - plantDeath# + o*rnorm(n=1, mean=0, sd=0.1) 
   }
-  #############START HERE: WORK ON PROJECTING TO t+1
   #Project to t+1
   for(i in 1:(n_plants*nsites)){
-    #p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_chan$ge[i])) #Poisson birth process for plants
-    p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_change[i]))
+    #p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = 1+p_change[i])) #Poisson birth process for plants
+    p_pops[i] <- sum(rpois(n=round(p_pops[i]),lambda = exp(p_change[i])))
     #browser()
     #p_pops[i] <- temp
   }
   #p_pops <- p_pops*(1+p_change)
   #a_pops <- (a_change+1)*a_pops #Update Animal population
   for(i in 1:(n_animals*nsites)){
-    a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
+    #a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
+    a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = exp(a_change[i])))
   }
+  
+#Dispersal (occurs after demographics for year)
+  #Decide number of animal dispersers from each site of each species
+  a_emms <- matrix(rbinom(n=length(a_pops), size=a_pops, prob=disprob), nrow=nsites)
+  a_pops <- a_pops-a_emms #Remove our immigrants from our pops for now so we don't count them redundantly
+
+  #animals disperse across sites
+  for(site in 1:nsites){
+    for(spp in 1:n_animals){
+  destin <- sample(factor_sites, size=a_emms[site, spp], replace=TRUE, prob=dexpsim[site,]/sum(dexpsim[site,])) #Sample our sites a number of times equal to the emmigrants from a particular site.
+  a_pops[,spp] <- a_pops[,spp] + as.matrix(table(destin), ncol=1) #Table summarizes how many immigrants go to each site and then we add them to the population size. 
+    }
+  }
+  #Now our plants can disperse
+  p_emms <- matrix(rbinom(n=length(p_pops), size=p_pops, prob=disprob), nrow=nsites)
+  p_pops <- p_pops-p_emms #Remove our immigrants from our pops for now so we don't count them redundantly
+
+  #plants disperse across sites
+  for(site in 1:nsites){
+    for(spp in 1:n_plants){
+      #browser()
+  destin <- sample(factor_sites, size=p_emms[site, spp], replace=TRUE, prob=dexpsim[site,]/sum(dexpsim[site,])) #Sample our sites a number of times equal to the emmigrants from a particular site.
+  p_pops[,spp] <- p_pops[,spp] + as.matrix(table(destin), ncol=1) #Table summarizes how many immigrants go to each site and then we add them to the population size. 
+  #print(paste("site=", site, "; spp=", spp, sep=""))
+    }
+  }
+  
+  
   #Extinction?
   if(length(colSums(p_pops)[colSums(p_pops)<=e_thresh])>0){
     print("global plant extinction")
   }
+  if(remove==TRUE){
     #Plant Extinction
     p_traitM <- p_traitM[which(colSums(p_pops)>e_thresh)] #Remove trait values from globally exinct plants
     p_traitV <- p_traitV[which(colSums(p_pops)>e_thresh)]
@@ -162,27 +208,23 @@ for(t in 1:num_timeSteps){
   if(n_animals < 1| n_plants < 1){
     print("Network breakdown")
       break
-    }
+  }
+  }
   #print(paste("polls=", n_animals, sep=""))
   #WmeanV <- rbind(WmeanV, sum((a_pops*a_traitV))/sum(a_pops))
   #meanV <- rbind(meanV, sum(a_traitV)/n_animals)
   #if(t %% 100==0)
-  
-  a_pops
-  
-  pops_temp <- data.frame(animals=a_pops, plants=p_pops, site=1:10, time=t)
+  pops_temp <- data.frame(animals=a_pops, plants=p_pops, site=factor_sites, time=t)
   pops <- rbind(pops, pops_temp)
+  if(t %% 10==0)
   print(t)
 }
 ```
 
 ```{r}
-colnames(pops)
 poplong <- pivot_longer(pops, cols = 1:(n_plants+n_animals), names_to="species", values_to = "popsize")
-ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#006600", "#006633"))+facet_wrap("site")
+#ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#006600", "#006633"))+facet_wrap("site")
 
-
-
-#ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#CC0000", "#FF0000", "#FF3333", "#006600", "#006633", "#193300"))+facet_wrap("site")
+ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#CC0000", "#FF0000", "#FF3333", "#006600", "#006633", "#193300", "green", "dark green"))+facet_wrap("site")
 ```
 
