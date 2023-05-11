@@ -187,3 +187,7 @@ for(i in 1:length(p_traitM)){
 lines(x=seq(-2, 2, by=0.01), y=p_den/max(p_den), col="green", lwd=3)
 ```
 
+```{r}
+
+```
+

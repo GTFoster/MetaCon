@@ -61,9 +61,9 @@ Parameters
 ```{r}
 r <- 0.5
 mup <- .1
-mua <- 0.35
+mua <- 0.25
 o <- 0.1
-lambda <- 0.8
+lambda <- 0.9
 K <- 100
 e_thresh <- 2
 invade_size <- 5
@@ -118,6 +118,7 @@ for(t in 1:num_timeSteps){
       propOfplants <- propOfplants+nums[,i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
     }
     pollDeath <- mua
+    #print(propOfplants)
     a_change[,n] <- lambda*propOfplants - pollDeath
   } #Animal Growth Rate
   
@@ -142,10 +143,12 @@ for(t in 1:num_timeSteps){
     #a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
     a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = exp(a_change[i])))
   }
-  
+  a_disprobs <- 1- (a_change/2 + 0.5) #Dispersal probability is proportional to local growth rate
+  a_disprobs[a_disprobs<0] <- 0 #Species that more than double have their dispersal prob set to 0
+  a_disprobs[a_disprobs>1] <- 1 #Species that really do poorly can't have a dispersal probability above 1
 #Dispersal (occurs after demographics for year)
   #Decide number of animal dispersers from each site of each species
-  a_emms <- matrix(rbinom(n=length(a_pops), size=a_pops, prob=disprob), nrow=nsites)
+  a_emms <- matrix(rbinom(n=length(a_pops), size=a_pops, prob=a_disprobs), nrow=nsites)
   a_pops <- a_pops-a_emms #Remove our immigrants from our pops for now so we don't count them redundantly
 
   #animals disperse across sites
@@ -155,6 +158,9 @@ for(t in 1:num_timeSteps){
   a_pops[,spp] <- a_pops[,spp] + as.matrix(table(destin), ncol=1) #Table summarizes how many immigrants go to each site and then we add them to the population size. 
     }
   }
+  p_disprobs <- 1- (p_change/2 + 0.5) #Dispersal probability is proportional to local growth rate
+  p_disprobs[p_disprobs<0] <- 0 #Species that more than double have their dispersal prob set to 0
+  p_disprobs[p_disprobs>1] <- 1 #Species that really do poorly can't have a dispersal probability above 1
   #Now our plants can disperse
   p_emms <- matrix(rbinom(n=length(p_pops), size=p_pops, prob=disprob), nrow=nsites)
   p_pops <- p_pops-p_emms #Remove our immigrants from our pops for now so we don't count them redundantly
@@ -169,10 +175,11 @@ for(t in 1:num_timeSteps){
     }
   }
   
-  
+  remove <- FALSE
   #Extinction?
   if(length(colSums(p_pops)[colSums(p_pops)<=e_thresh])>0){
     print("global plant extinction")
+    remove <- TRUE
   }
   if(remove==TRUE){
     #Plant Extinction
@@ -180,12 +187,15 @@ for(t in 1:num_timeSteps){
     p_traitV <- p_traitV[which(colSums(p_pops)>e_thresh)]
     p_pops <- p_pops[,which(colSums(p_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
     #Animal Extinction
+    remove <- FALSE
   if(length(colSums(a_pops)[colSums(a_pops)<=e_thresh])>0){
     print("global animal extinction")
-  }
+    remove <- TRUE
+  } #HERE: Start with making this flexible
     a_traitM <- a_traitM[which(colSums(a_pops)>e_thresh)] #Remove trait values from globally exinct plants
     a_traitV <- a_traitV[which(colSums(a_pops)>e_thresh)]
     a_pops <- a_pops[,which(colSums(a_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
+  
   #Do we invade? $
     #if(rbinom(1, 1, 0.05)==1){
       #print("invasion")
