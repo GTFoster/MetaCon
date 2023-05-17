@@ -80,7 +80,7 @@ min.f1f2 <- function(x, mu1, mu2, sd1, sd2) {
 #####Start Here: Figure out how to flexibly keep track of individual species as they enter the community/go extinct
 
 ```{r}
-num_timeSteps <- 100
+num_timeSteps <- 1000
 p_rich <- NULL
 a_rich <- NULL
 WmeanV <- NULL
@@ -192,7 +192,8 @@ for(t in 1:num_timeSteps){
     print("global animal extinction")
     remove <- TRUE
   } #HERE: Start with making this flexible
-    a_traitM <- a_traitM[which(colSums(a_pops)>e_thresh)] #Remove trait values from globally exinct plants
+    #Problem: keeping species in as 0's makes calculations run slower due to matrix issues. However, it makes it much easier to keep track of our total population sizes. Not sure which direction to solve this in. 
+    a_traitM <- a_traitM[which(colSums(a_pops)>e_thresh)] #Remove trait values from globally extinct plants
     a_traitV <- a_traitV[which(colSums(a_pops)>e_thresh)]
     a_pops <- a_pops[,which(colSums(a_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
   
@@ -212,8 +213,8 @@ for(t in 1:num_timeSteps){
   #    a_traitV <- c(a_traitV, runif(1, 0, 0.5)) #Same for new trait variance
   #  }
   #  }
-  n_animals <- ncol(a_pops)
-  n_plants <- ncol(p_pops)
+  n_animals <- length(a_pops)
+  n_plants <- length(p_pops)
     
   if(n_animals < 1| n_plants < 1){
     print("Network breakdown")
