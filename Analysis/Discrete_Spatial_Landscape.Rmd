@@ -86,7 +86,10 @@ a_rich <- NULL
 WmeanV <- NULL
 meanV <- NULL
 
-pops <- NULL
+#pops <- NULL
+p_pops_output <- cbind(c(1:5), rep(0,nsites),p_pops) #Make output dataframe; first column is site, second is timestep; then populations
+a_pops_output <- cbind(c(1:5), rep(0,nsites),a_pops) #Make output dataframe; first column is site, second is timestep; then populations
+
 for(t in 1:num_timeSteps){
   #p_rich <- rbind(p_rich, n_plants)
   #a_rich <- rbind(a_rich, n_animals)
@@ -183,38 +186,42 @@ for(t in 1:num_timeSteps){
   }
   if(remove==TRUE){
     #Plant Extinction
-    p_traitM <- p_traitM[which(colSums(p_pops)>e_thresh)] #Remove trait values from globally exinct plants
-    p_traitV <- p_traitV[which(colSums(p_pops)>e_thresh)]
-    p_pops <- p_pops[,which(colSums(p_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
+    #p_traitM <- p_traitM[which(colSums(p_pops)>e_thresh)] #Remove trait values from globally exinct plants
+    #p_traitV <- p_traitV[which(colSums(p_pops)>e_thresh)]
+    #p_pops <- p_pops[,which(colSums(p_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
     #Animal Extinction
+    p_pops[,c(1:ncol(p_pops))[colSums(p_pops)<=e_thresh]] <- 0
     remove <- FALSE
   if(length(colSums(a_pops)[colSums(a_pops)<=e_thresh])>0){
     print("global animal extinction")
     remove <- TRUE
+    a_pops[,c(1:ncol(a_pops))[colSums(a_pops)<=e_thresh]] <- 0 #enforce extinction, rounding down any below 2.
   } #HERE: Start with making this flexible
     #Problem: keeping species in as 0's makes calculations run slower due to matrix issues. However, it makes it much easier to keep track of our total population sizes. Not sure which direction to solve this in. 
-    a_traitM <- a_traitM[which(colSums(a_pops)>e_thresh)] #Remove trait values from globally extinct plants
-    a_traitV <- a_traitV[which(colSums(a_pops)>e_thresh)]
-    a_pops <- a_pops[,which(colSums(a_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
+    #a_traitM <- a_traitM[which(colSums(a_pops)>e_thresh)] #Remove trait values from globally extinct plants
+    #a_traitV <- a_traitV[which(colSums(a_pops)>e_thresh)]
+    #a_pops <- a_pops[,which(colSums(a_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
   
-  #Do we invade? $
-    #if(rbinom(1, 1, 0.05)==1){
-      #print("invasion")
-  #    invasion <- runif(1)
-  #    if(invasion >=0.5){
-  #      print("plant invades")
-  #      p_pops <- c(p_pops, invade_size) #new pop always invades at 0.1
-  #      p_traitM <- c(p_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
-  #      p_traitV <- c(p_traitV, 0.1) #All set to be the same in Becker paper
-  #  }else{
-  #    print("pollinator invades")
-  #    a_pops <- c(a_pops, invade_size) #new pop always invades at 0.1
-  #    a_traitM <- c(a_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
-  #    a_traitV <- c(a_traitV, runif(1, 0, 0.5)) #Same for new trait variance
-  #  }
-  #  }
-  n_animals <- length(a_pops)
-  n_plants <- length(p_pops)
+  #Do we invade? 
+    if(rbinom(1, 1, 0.25)==1){
+    print("invasion")
+     invasion <- runif(1)
+     invasion_vector <- c(rep(0,nsites))
+     invasion_vector[sample(1:nsites, size=1)] <- invade_size #choose a random site to invade with the invade_size; this is set up to be the same invader population size for plants and polls, but this could easily be split up
+     if(invasion >=0.5){
+       print("plant invades")
+       p_pops <- cbind(p_pops, unlist(invasion_vector)) #new pop always invades a random site at invade_size; unlist is to get rid of that pesky name
+       p_traitM <- c(p_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
+       p_traitV <- c(p_traitV, 0.1) #All set to be the same in Becker paper
+   }else{
+     print("pollinator invades")
+     a_pops <- cbind(a_pops, unlist(invasion_vector)) #new pop always invades a random site at invade_size
+     a_traitM <- c(a_traitM, runif(1)) #pick new trait mean from a uniform distribution [0,1]
+     a_traitV <- c(a_traitV, runif(1, 0, 0.5)) #Same for new trait variance
+   }
+   }
+  n_animals <- ncol(a_pops)
+  n_plants <- ncol(p_pops)
     
   if(n_animals < 1| n_plants < 1){
     print("Network breakdown")
@@ -225,16 +232,65 @@ for(t in 1:num_timeSteps){
   #WmeanV <- rbind(WmeanV, sum((a_pops*a_traitV))/sum(a_pops))
   #meanV <- rbind(meanV, sum(a_traitV)/n_animals)
   #if(t %% 100==0)
-  pops_temp <- data.frame(animals=a_pops, plants=p_pops, site=factor_sites, time=t)
-  pops <- rbind(pops, pops_temp)
+
+if((ncol(a_pops)+2)>ncol(a_pops_output)){ #change the output dimensions to account for a new species
+  print("Yup")
+  a_pops_output <- cbind(a_pops_output, c(rep(0,nrow(a_pops_output))))#add a 0 for every preceeding timestep
+  #colnames(a_pops_output)[ncol(a_pops_output)] <- colnames(a_pops)[ncol(a_pops)] # rename based on the newest animal species
+}
+a_pops_temp <- cbind(c(1:5), rep(t,nsites),a_pops)
+a_pops_output <- rbind(a_pops_output, a_pops_temp)
+
+
+if((ncol(p_pops)+2)>ncol(p_pops_output)){ #change the output dimensions to account for a new species
+  p_pops_output <- cbind(p_pops_output, c(rep(0,nrow(p_pops_output))))
+  #colnames(p_pops_output)[ncol(p_pops_output)] <- colnames(p_pops)[ncol(p_pops)] #  rename based on the newest plant species
+}
+p_pops_temp <- cbind(c(1:5), rep(t,nsites),p_pops)
+p_pops_output <- rbind(p_pops_output, p_pops_temp)
+
+  #pops <- rbind(pops, pops_temp)
   if(t %% 10==0)
   print(t)
 }
 ```
+```{r}
+plant_long <- pivot_longer(as.data.frame(p_pops_output), cols=3:ncol(p_pops_output), names_to="species", values_to = "popsize")
+
+ggplot(data=plant_long, aes(x=V2, y=popsize, color=as.factor(species)))+geom_line()+facet_wrap("V1")
+
+
+an_long <- pivot_longer(as.data.frame(a_pops_output), cols=3:ncol(a_pops_output), names_to="species", values_to = "popsize")
+
+ggplot(data=an_long, aes(x=V2, y=popsize, color=as.factor(species)))+geom_line()+facet_wrap("V1")
+
+```
+```{r}
+plot(x=NA, y=NA, xlim=c(-1.5,1.5), ylim=c(0,10))
+for(i in 1:length(a_traitM)){
+  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=a_traitM[i], sd=a_traitV[i]), col="dark red")
+}
+for(i in 1:length(p_traitM)){
+  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i]), col="dark green")
+}
+
+
+plot(x=NA, y=NA, xlim=c(-1.5,1.5), ylim=c(0,10))
+for(i in (1:length(a_traitM))[colSums(a_pops)>0]){
+  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=a_traitM[i], sd=a_traitV[i]), col="dark red")
+}
+for(i in (1:length(p_traitM))[colSums(p_pops)>0]){
+  lines(x=seq(-2, 2, by=0.01), y=dnorm(x=seq(-2, 2, by=0.01), mean=p_traitM[i], sd=p_traitV[i]), col="dark green")
+}
+
+(1:length(a_traitM))[colSums(a_pops)>0]
+```
+
 
 ```{r}
 poplong <- pivot_longer(pops, cols = 1:(n_plants+n_animals), names_to="species", values_to = "popsize")
 #ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#006600", "#006633"))+facet_wrap("site")
+
 
 ggplot(data=poplong, aes(x=time, y=popsize, color=species))+geom_line()+ scale_color_manual(values=c("#660000", "#990000", "#CC0000", "#FF0000", "#FF3333", "#006600", "#006633", "#193300", "green", "dark green"))+facet_wrap("site")
 ```
