@@ -1,0 +1,107 @@
+
+
+library(magrittr)
+library(tidyverse)
+library(scales)
+library(parallel)
+
+
+
+
+nsites <- 5
+factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
+coords <- data.frame(x=runif(nsites), y=runif(nsites))
+eucdist <- dist(coords, diag=T, upper=T)
+dexpdist <- dexp(eucdist, rate=10)
+dexpsim <- 1/(1+as.matrix(dexpdist)) #Converting our distance matrix to a similarity score (easier for me to then turn into a pmf).
+#Found this particular metric from here: https://stats.stackexchange.com/questions/158279/how-i-can-convert-distance-euclidean-to-similarity-score
+
+
+
+
+
+source(file="./DispersalSimulation.R") #load in our dispersal simualtion function. rOxygen-style description available in file.
+
+
+
+
+list_results <- list()
+for(i in 1:5){
+list_results[[i]] <- try(runDispersalSim(nsites=nsites, disptype="negativeComp",n_plants=5, n_animals=5, dexpsim=dexpsim, r=0.5, mup=0.1, mua=0.1, o=0.1, lambda=0.9, K=100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 1000, invProb=0.1))
+}
+
+if(class(list_results[[1]])=='try-error'){
+    print("didnt work")
+  }
+class(list_results[[1]])
+
+
+
+
+
+tictoc::tic()
+num_iterations <- 5
+
+# Set up the cluster for parallelization
+cl <- makeCluster(5)
+              
+# Define a function to run the simulation
+runSimulation <- function() {
+  try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 2, invProb = 0.1))
+}
+
+clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim", "dexpsim"))
+
+# Run the simulations in parallel
+list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
+  runSimulation()
+})
+
+# Stop the cluster
+stopCluster(cl)
+time1 <- tictoc::toc()
+
+save(list_results, file="simulationNegative.Rda")
+print("Done with negative")
+
+
+
+tictoc::tic()
+cl <- makeCluster(5)
+runSimulation <- function() {
+  try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 2, invProb = 0.1))
+}
+clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim", "dexpsim"))
+
+# Run the simulations in parallel
+list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
+  runSimulation()
+})
+
+stopCluster(cl)
+time2 <- tictoc::toc()
+
+save(list_results, file="simulationPositive.Rda")
+print("Done with positive")
+
+
+
+tictoc::tic()
+cl <- makeCluster(5)
+runSimulation <- function() {
+  try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 2, invProb = 0.1))
+}
+clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim", "dexpsim"))
+
+# Run the simulations in parallel
+list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
+  runSimulation()
+})
+
+stopCluster(cl)
+time3 <- tictoc::toc()
+
+save(list_results, file="simulationPositive.Rda")
+print("Done with neutral")
+
+
