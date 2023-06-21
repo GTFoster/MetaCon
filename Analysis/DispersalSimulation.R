@@ -58,27 +58,54 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
   p_pops_output <- cbind(c(1:5), rep(0,nsites),p_pops) #Make output dataframe; first column is site, second is timestep; then populations
   a_pops_output <- cbind(c(1:5), rep(0,nsites),a_pops) #Make output dataframe; first column is site, second is timestep; then populations
 
+  prior_richness <- 0 #setting as the starting point
+  
+  int_fail <- FALSE
+  
   for(t in 1:num_timeSteps){
-      #p_rich <- rbind(p_rich, n_plants)
-      #a_rich <- rbind(a_rich, n_animals)
-      #Check if community is same as in t-1
-      #if not; recalculate A and u
-      alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
-      for(ia in 1:n_animals){
-        for(ip in 1:n_plants){
-          alpha[ia, ip] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
-          #print(paste("ia=", ia, "; ip=", ip, sep=""))
+    richness <- ncol(a_pops)+ncol(p_pops)
+    if(richness > prior_richness){ #Check if we've updated the number of spp in the community
+        #if so, recalculate niche overlap and competition matrices
+        alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
+        for(ia in 1:n_animals){
+          if(int_fail==TRUE){ #If we've come across an integration failure, break the loop
+            break()
+          }
+          for(ip in 1:n_plants){
+            temp <- try(integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value) #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+            if(class(temp)=='try-error'){
+              int_fail <- TRUE
+              break()
+            }
+            alpha[ia, ip] <- temp
+            #print(paste("ia=", ia, "; ip=", ip, sep=""))
+          }
         }
-      }
-      alpha[alpha<0.05] <- 0
-      
-      u <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
-      
-      for(p1 in 1:n_plants){
-        for(p2 in 1:n_plants){
-          u[p1, p2] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+        alpha[alpha<0.05] <- 0
+        
+        u <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
+        
+        for(p1 in 1:n_plants){
+          if(int_fail==TRUE){ #If we've come across an integration failure, break the loop
+            break()
+          }
+          for(p2 in 1:n_plants){
+            temp <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+            if(class(temp)=='try-error'){
+              int_fail <- TRUE
+              break()
+            }
+            u[p1, p2] <- temp
+          }
         }
-      }
+    }
+    prior_richness <- richness
+    
+    if(int_fail==TRUE){ #Same check for int_fail as above, but this time we'd be breaking our overall loop
+      outputlist <- list(plants=paste("intfail at t=", t, sep=""), animals=NA, a_traitsM=NA, a_traitV=NA, p_traitsM=NA, p_traitV=NA)
+      return(outputlist) 
+      break()
+    }
       #Find out dpop/dt
       a_change <- matrix(data=NA, nrow=nsites, ncol=n_animals)
       for(n in 1:n_animals){
@@ -121,7 +148,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         a_disprobs <- 1-disprobmax*exp(a_change)/2
       }
       if(disptype=="neutralComp"){
-        a_disprobs <- disprobmax/2 #Note: this creates a single scalar, rather than a matrix. Should work the same in the dispersal operation below, but just somthing to keep track of. 
+        a_disprobs <- disprobmax/2 #Note: this creates a single scalar, rather than a matrix. Should work the same in the dispersal operation below, but just something to keep track of. 
       }
       
       a_disprobs[a_disprobs<0] <- 0 #Species that more than double have their dispersal prob set to 0
@@ -166,8 +193,8 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         #p_traitV <- p_traitV[which(colSums(p_pops)>e_thresh)]
         #p_pops <- p_pops[,which(colSums(p_pops)>e_thresh)] #Stop tracking populations of globally extinct plants
         #Animal Extinction
-        p_pops[,c(1:ncol(p_pops))[colSums(p_pops)<=e_thresh]] <- 0
-        remove <- FALSE
+        #p_pops[,c(1:ncol(p_pops))[colSums(p_pops)<=e_thresh]] <- 0
+        #remove <- FALSE
       }
       if(length(colSums(a_pops)[colSums(a_pops)<=e_thresh])>0){
         #print("global animal extinction")
