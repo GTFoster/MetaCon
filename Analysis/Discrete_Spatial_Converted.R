@@ -22,10 +22,10 @@ source(file="./DispersalSimulation.R") #load in our dispersal simulation functio
 
 
 
-list_results <- list()
-for(i in 1:5){
-list_results[[i]] <- try(runDispersalSim(nsites=nsites, disptype="negativeComp",n_plants=5, n_animals=5, dexpsim=dexpsim, r=0.5, mup=0.1, mua=0.1, o=0.1, lambda=0.9, K=100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 3000, invProb=0.5))
-}
+#list_results <- list()
+#for(i in 1:5){
+#list_results[[i]] <- try(runDispersalSim(nsites=nsites, disptype="negativeComp",n_plants=5, n_animals=5, dexpsim=dexpsim, r=0.5, mup=0.1, mua=0.1, o=0.1, lambda=0.9, K=100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 3000, invProb=0.5))
+#}
 
 
 
@@ -36,7 +36,6 @@ num_iterations <- 100
 
 # Set up the cluster for parallelization
 cl <- makeCluster(detectCores()-2)
-?makeCluster
               
 # Define a function to run the simulation
 runSimulation <- function() {
