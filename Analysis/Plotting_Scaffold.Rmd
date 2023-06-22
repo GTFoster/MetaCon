@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(magrittr)
 ```
 
 ```{r}
@@ -47,7 +48,13 @@ plot(x=1:1001, y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean T
 ```
 Who's successfully colonizing?
 ```{r}
+colonization <- apply(pcom_abund[,3:ncol(pcom_abund)],2, function(x) pcom_abund$V2[x !=0][1])
 
+extinction <- apply(pcom_abund[,3:ncol(pcom_abund)],2, function(x) tail(pcom_abund$V2[x !=0],1))
+
+hist(extinction-colonization, breaks=12)
+
+plot(y=run1$p_traitV, x=extinction-colonization)
 ```
 
 Community vs Population Stability?

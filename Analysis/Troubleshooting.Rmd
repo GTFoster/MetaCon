@@ -45,7 +45,7 @@ num_iterations <- 100
 
 ```{r}
 set.seed(24601)
-disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0.5; mup = 0.1; mua = 0.1; o = 0.1; lambda = 0.9; K = 100; e_thresh = 2; invade_size = 5; disprobmax = 0.2; num_timeSteps = 10000; invProb = 0.1
+disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0.5; mup = 0.1; mua = 0.1; o = 0.1; lambda = 0.01; K = 100; e_thresh = 2; invade_size = 5; disprobmax = 0.2; num_timeSteps = 10000; invProb = 0.1
 
   factor_sites <- as.factor(1:nsites)
   #Setting up initial plant pops
@@ -124,10 +124,10 @@ disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0
       a_change <- matrix(data=NA, nrow=nsites, ncol=n_animals)
       for(n in 1:n_animals){
         propOfplants <- 0
-        nums <- p_pops %*%diag(alpha[n,])#Diag is important here; this essentially does column-wise multiplication
+        nums <- (p_pops %*%diag(alpha[n,]))*a_pops[,n]#Diag is important here; this essentially does column-wise multiplication
         for(i in 1:n_plants){
           #Numerator-plant reward given by each focal pollinator
-          propOfplants <- propOfplants+nums[,i]/(r+colSums(a_pops %*% diag(alpha[,i]))) #Denominator-scaled by total available pollen
+          propOfplants <- propOfplants+nums[,i]/(r+rowSums(a_pops %*% diag(alpha[,i]))) #Denominator-scaled by total available pollen
         }
         pollDeath <- mua
         #print(propOfplants)
