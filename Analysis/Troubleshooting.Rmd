@@ -45,7 +45,7 @@ num_iterations <- 100
 
 ```{r}
 set.seed(24601)
-disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0.5; mup = 0.1; mua = 0.1; o = 0.1; lambda = 0.01; K = 100; e_thresh = 2; invade_size = 5; disprobmax = 0.2; num_timeSteps = 10000; invProb = 0.1
+disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0.5; mup = 0.1; mua = 0.1; o = 0.1; lambda = 2; K = 1000; e_thresh = 2; invade_size = 5; disprobmax = 0.2; num_timeSteps = 400; invProb = 0.1
 
   factor_sites <- as.factor(1:nsites)
   #Setting up initial plant pops
@@ -114,6 +114,23 @@ disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0
         }
     }
     prior_richness <- richness
+    o <- matrix(data=NA, nrow=n_animals, ncol=n_animals) #Now, let's look at animal competition
+        for(ia in 1:n_animals){
+          if(int_fail==TRUE){ #If we've come across an integration failure, break the loop
+            break()
+          }
+          for(a2 in 1:n_animals){
+            temp <- try(integrate(min.f1f2, -Inf, Inf, mu1=a_traitM[a2], mu2=a_traitM[ia], sd1=a_traitV[a2], sd2=a_traitV[ia])$value) #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+            if(class(temp)=='try-error'){
+              int_fail <- TRUE
+              break()
+            }
+            o[ia, a2]<- temp
+            #print(paste("ia=", ia, "; ip=", ip, sep=""))
+          }
+        }
+  
+    
     
     if(int_fail==TRUE){ #Same check for int_fail as above, but this time we'd be breaking our overall loop
       outputlist <- list(plants=paste("intfail at t=", t, sep=""), animals=NA, a_traitsM=NA, a_traitV=NA, p_traitsM=NA, p_traitV=NA)
@@ -125,13 +142,15 @@ disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0
       for(n in 1:n_animals){
         propOfplants <- 0
         nums <- (p_pops %*%diag(alpha[n,]))*a_pops[,n]#Diag is important here; this essentially does column-wise multiplication
+        #Valdevinos: plants need to be in both
+        
         for(i in 1:n_plants){
           #Numerator-plant reward given by each focal pollinator
-          propOfplants <- propOfplants+nums[,i]/(r+rowSums(a_pops %*% diag(alpha[,i]))) #Denominator-scaled by total available pollen
+          propOfplants <- propOfplants+nums[,i]/(r+rowSums(a_pops %*% diag(alpha[,i]))*p_pops[,i]) #Denominator-scaled by total available pollen
         }
         pollDeath <- mua
         #print(propOfplants)
-        a_change[,n] <- lambda*propOfplants - pollDeath
+        a_change[,n] <- lambda*((1-(o[,n]%*%t(a_pops))/K))+propOfplants - pollDeath
       } #Animal Growth Rate
       
       p_change <- matrix(data=NA, nrow=nsites, ncol=n_plants)
@@ -270,6 +289,6 @@ disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0
         print(t)
   }
   outputlist <- list(plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
-  return(outputlist) #Specify return object
+ #Specify return object
 ```
 

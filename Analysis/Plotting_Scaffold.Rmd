@@ -25,7 +25,6 @@ str(list_results)
 run1 <- list_results[[1]]
 tail(run1$plants)
 
-
 ```
 Mean Niche Breadth
 ```{r}
@@ -36,7 +35,7 @@ WmeanVar <- apply(pcom_abund[,3:ncol(pcom_abund)]/rowSums(pcom_abund[,3:ncol(pco
   }
 )
 
-plot(x=1:1001, y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Plants")
+plot(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Plants")
 
 acom_abund <- as.data.frame(run1$animals) %>% group_by(., V2) %>% summarize(., across(everything(), sum)) #create community abundance matrix by summing across sites (V2)
 
@@ -44,7 +43,7 @@ WmeanVar <- apply(acom_abund[,3:ncol(acom_abund)]/rowSums(acom_abund[,3:ncol(aco
   sum(X*run1$a_traitV) #multiply the mean trait value by relative abundances at each timestep, then return the sum
   }
 )
-plot(x=1:1001, y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Animals")
+plot(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Animals")
 ```
 Who's successfully colonizing?
 ```{r}
