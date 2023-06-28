@@ -1,55 +1,39 @@
----
-title: "Troubleshooting"
-author: "Grant Foster"
-date: "2023-06-21"
-output: html_document
----
+#' @description 
+#' Initiates a random fun of spatially-explicit trait matching model given an initial set number plant and animal species.
+#' Trait values are randomly assigned, and new species are included through time. Outputs results of simulation in a list object.
+#' 
+#' @param disptype character; describes relationship between population growth rate and dispersal strength. Options are one of c("neutralComp", "positiveComp", "negativeComp")
+#' When selecting "positiveComp", animal populations with disperse at rate lambda/2 \propto disprobmax (with a maximum of disprobmax). 
+#' "negativeComp" reverses this relationship, such that animal pops disperse at rate \propto 1-lambda/2 disprobmax (same limits as above)\
+#' "neutralComp" removes the correlation, setting animal dispersal equal to disprobmax/2 for all species.
+#' @param nsites number; Number of sites in metacommunity
+#' @param dexpsim Distance matrix; describing distance between sites
+#' @param disprobmax
+#' @param n_plants integer; initial number of plant species in community
+#' @param n_animals integer; initial number of animal species in community
+#' @param r number (0-infinity); maximum per capita growth rate for plant species
+#' @param mup number (0-1); plant death rate per timestep
+#' @param mua number (0-1); animal death rate per timestep
+#' @param lambda number (0-infinity); maximum per capita growth rate for animal species
+#' @param K integer; carrying capacity for plant species (same for all species)
+#' @param e_thresh integer; extinction threshold; species with total populations across sites below this threshold are considered extinct 
+#' @param invProb number (0-1); probability on new species invasion per timestep. Average time between invasions is equal to 1/invProb.
+#' Once invasion occurs, we flip a coin to determine whether the new species is a plant or animal.
+#' @param invade_size integer; size of invading population. All invaders of a given species colonize a randomly selected site together
+#' @param num_timeSteps integer; number of timesteps to run the simulation for (default value is 500)
+#' 
+#' 
+#' @return outputlist list object; with the following levels;
+#' 
+#' @return outputlist$p_pops_output matrix of integers; first column is site number, second column is time, columns 3:ncol are population sizes of plant_species
+#' @return outputlist$a_pops_output matrix of integers; analogous form as above
+#' @return outputlist$a_traitM vector of numbers; mean values for each animal species' trait distributions
+#' @return outputlist$a_traitV vector of numbers; variance parameter for each animal species' trait distributions
+#' @return outputlist$p_traitsM vector of numbers; analogous form as above
+#' @return outputlist$p_traitV vector of numbers; analogous form as above
+#' 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
-library(scales)
-library(parallel)
-
-
-
-
-nsites <- 5
-factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
-coords <- data.frame(x=runif(nsites), y=runif(nsites))
-eucdist <- dist(coords, diag=T, upper=T)
-dexpdist <- dexp(eucdist, rate=10)
-dexpsim <- 1/(1+as.matrix(dexpdist)) #Converting our distance matrix to a similarity score (easier for me to then turn into a pmf).
-#Found this particular metric from here: https://stats.stackexchange.com/questions/158279/how-i-can-convert-distance-euclidean-to-similarity-score
-
-
-
-
-
-source(file="./DispersalSimulation.R") #load in our dispersal simulation function. rOxygen-style description available in file.
-
-
-
-
-#list_results <- list()
-#for(i in 1:5){
-#list_results[[i]] <- try(runDispersalSim(nsites=nsites, disptype="negativeComp",n_plants=5, n_animals=5, dexpsim=dexpsim, r=0.5, mup=0.1, mua=0.1, o=0.1, lambda=0.9, K=100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 3000, invProb=0.5))
-#}
-
-
-num_iterations <- 100
-```
-
-
-```{r}
-set.seed(12)
-
-disptype = "negativeComp"; n_plants = 5; n_animals = 5; dexpsim = dexpsim; r = 0.5; mup = 0.1; mua = 0.05; o = 0.1; lambda = log(1.5); K = 1000; e_thresh = 2; invade_size = 5; disprobmax = 0.2; num_timeSteps = 2000; invProb = 0.1
-
-library(tictoc)
-tictoc::tic()
+runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, n_animals, r, mup, mua, o, lambda, K, e_thresh, invProb, invade_size, num_timeSteps=500){
   factor_sites <- as.factor(1:nsites)
   #Setting up initial plant pops
   p_pops <- matrix(data=round(runif(nsites*n_plants, 1, 200)), nrow=nsites, ncol=n_plants) #now, our pops are a matrix instead of a vector in order to track across multiple sites
@@ -115,25 +99,25 @@ tictoc::tic()
             u[p1, p2] <- temp
           }
         }
-    }
-    prior_richness <- richness
-    o <- matrix(data=NA, nrow=n_animals, ncol=n_animals) #Now, let's look at animal competition
-        for(ia in 1:n_animals){
-          if(int_fail==TRUE){ #If we've come across an integration failure, break the loop
-            break()
-          }
-          for(a2 in 1:n_animals){
-            temp <- try(integrate(min.f1f2, -Inf, Inf, mu1=a_traitM[a2], mu2=a_traitM[ia], sd1=a_traitV[a2], sd2=a_traitV[ia])$value) #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
-            if(class(temp)=='try-error'){
-              int_fail <- TRUE
-              break()
-            }
-            o[ia, a2]<- temp
-            #print(paste("ia=", ia, "; ip=", ip, sep=""))
-          }
-        }
-  
     
+    o <- matrix(data=NA, nrow=n_animals, ncol=n_animals) #Now, let's look at animal competition
+    for(ia in 1:n_animals){
+      if(int_fail==TRUE){ #If we've come across an integration failure, break the loop
+        break()
+      }
+      for(a2 in 1:n_animals){
+        temp <- try(integrate(min.f1f2, -Inf, Inf, mu1=a_traitM[a2], mu2=a_traitM[ia], sd1=a_traitV[a2], sd2=a_traitV[ia])$value) #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+        if(class(temp)=='try-error'){
+          int_fail <- TRUE
+          break()
+        }
+        o[ia, a2]<- temp
+        #print(paste("ia=", ia, "; ip=", ip, sep=""))
+      }
+    }
+  }
+    
+    prior_richness <- richness
     
     if(int_fail==TRUE){ #Same check for int_fail as above, but this time we'd be breaking our overall loop
       outputlist <- list(plants=paste("intfail at t=", t, sep=""), animals=NA, a_traitsM=NA, a_traitV=NA, p_traitsM=NA, p_traitV=NA)
@@ -144,17 +128,15 @@ tictoc::tic()
       a_change <- matrix(data=NA, nrow=nsites, ncol=n_animals)
       for(n in 1:n_animals){
         propOfplants <- 0
-        nums <- (p_pops %*%diag(alpha[n,]))*a_pops[,n]#Diag is important here; this essentially does column-wise multiplication
-        #Valdevinos: plants need to be in both
-        
+        nums <- alpha[n,]*p_pops#[,site]
         for(i in 1:n_plants){
           #Numerator-plant reward given by each focal pollinator
-          propOfplants <- propOfplants+nums[,i]/(r+rowSums(a_pops %*% diag(alpha[,i]))*p_pops[,i]) #Denominator-scaled by total available pollen
+          propOfplants <- propOfplants+nums[,i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
         }
-        #print(propOfplants)
         pollDeath <- mua
         #print(propOfplants)
         a_change[,n] <- lambda*((1-(o[,n]%*%t(a_pops))/K))*propOfplants# - pollDeath
+        
       } #Animal Growth Rate
       
       p_change <- matrix(data=NA, nrow=nsites, ncol=n_plants)
@@ -163,7 +145,7 @@ tictoc::tic()
         #pollBenefits <-sum(alpha[,n]*a_pops*p_pops[n])/(r+sum(alpha[,n]*a_pops)) #NOTE: THIS IS MORE SIMILIAR TO BECKER. NOt sure why their p_pop is included here. 
         pollBenefits <-rowSums(t(alpha[,n]*t(a_pops)))/(r+rowSums(t(alpha[,n]*t(a_pops))))
         plantDeath <- mup
-        p_change[,n] <- r*plantCompetition*pollBenefits# - plantDeath# + o*rnorm(n=1, mean=0, sd=0.1) 
+        p_change[,n] <- r*plantCompetition*pollBenefits #- plantDeath# + o*rnorm(n=1, mean=0, sd=0.1) 
       }
       #Project to t+1
       for(i in 1:(n_plants*nsites)){
@@ -292,8 +274,6 @@ tictoc::tic()
       if(t %% 10==0)
         print(t)
   }
-  time <- tictoc::toc()
   outputlist <- list(plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
- #Specify return object
-```
-
+  return(outputlist) #Specify return object
+}
