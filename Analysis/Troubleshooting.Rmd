@@ -297,3 +297,13 @@ tictoc::tic()
  #Specify return object
 ```
 
+```{r}
+set.seed(2)
+v <- runSimulation()
+plan <- v$plants
+
+p_pops <- v$plants[1:5,3:7]
+a_pops <- v$animals[1:5,3:7]
+a_traitM
+```
+

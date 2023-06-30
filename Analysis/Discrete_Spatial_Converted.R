@@ -32,14 +32,15 @@ source(file="./DispersalSimulationAnComp.R") #load in our dispersal simulation f
 
 
 tictoc::tic()
-num_iterations <- 100
+#num_iterations <- 100
+num_iterations <- 4
 
 # Set up the cluster for parallelization
 cl <- makeCluster(detectCores()-2, outfile="")
               
 # Define a function to run the simulation
 runSimulation <- function() {
-  x <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 100, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 3000, invProb = 0.1))
+  x <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 100, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 100, invProb = 0.1))
   return(x)
   }
 

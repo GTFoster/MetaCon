@@ -60,7 +60,8 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
 
   prior_richness <- 0 #setting as the starting point
   
-  int_fail <- FALSE
+  int_fail <- FALSE #Dummy variable for integral try statement
+  lambda_fail <- FALSE #Dummy variable for rpois() projection
   
   for(t in 1:num_timeSteps){
     richness <- ncol(a_pops)+ncol(p_pops)
@@ -128,7 +129,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
       a_change <- matrix(data=NA, nrow=nsites, ncol=n_animals)
       for(n in 1:n_animals){
         propOfplants <- 0
-        nums <- alpha[n,]*p_pops#[,site]
+        nums <- alpha[n,]*p_pops/K#[,site] What if we standardize plant species to K? This seems like it might have worked to fix my problem
         for(i in 1:n_plants){
           #Numerator-plant reward given by each focal pollinator
           propOfplants <- propOfplants+nums[,i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
@@ -154,11 +155,25 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         #browser()
         #p_pops[i] <- temp
       }
+      
+
       #p_pops <- p_pops*(1+p_change)
       #a_pops <- (a_change+1)*a_pops #Update Animal population
       for(i in 1:(n_animals*nsites)){
         #a_pops[i] <- sum(rpois(n=round(a_pops[i]),lambda = 1+a_change[i])) #Poisson birth process for animals
-        a_pops[i] <- sum(rpois(n=round(a_pops[i]), lambda = exp(a_change[i])))
+        new_a_pop <- try(sum(rpois(n=round(a_pops[i]), lambda = exp(a_change[i]))))
+        if(class(new_a_pop)=='try-error'){
+          lambda_fail <- TRUE
+          next()
+        }
+        a_pops[i] <- new_a_pop
+      }
+      if(lambda_fail==TRUE){ #If we fail a lambda projection, we break our overall loop
+        #outputlist <- list(warn=paste("lambdafail at t=", t, sep=""), plants=p_pops_output, animals=a_pops_output, a_traitsM=NA, a_traitV=NA, p_traitsM=NA, p_traitV=NA)
+        outputlist <- list(warn=paste("lambdafail at t=", t, sep=""), plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
+        return(outputlist) 
+        
+        break()
       }
       if(disptype=="positiveComp"){
         a_disprobs <- disprobmax*exp(a_change)/2
