@@ -92,7 +92,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
             break()
           }
           for(p2 in 1:n_plants){
-            temp <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+            temp <- try(integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value) #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
             if(class(temp)=='try-error'){
               int_fail <- TRUE
               break()
