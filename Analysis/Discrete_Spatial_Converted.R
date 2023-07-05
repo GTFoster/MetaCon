@@ -5,7 +5,8 @@ library(parallel)
 
 
 
-nsites <- 5
+#nsites <- 5
+nsites <- 15
 factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
 coords <- data.frame(x=runif(nsites), y=runif(nsites))
 eucdist <- dist(coords, diag=T, upper=T)

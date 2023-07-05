@@ -20,30 +20,53 @@ load("mini_simulationNegative.Rda")
 ```
 
 ```{r}
-str(list_results)
+#str(list_results)
 
-run1 <- list_results[[1]]
+run1 <- list_results[[2]]
 tail(run1$plants)
 
 ```
+
+Counting successful runs
+```{r}
+index <- NULL
+for(i in 1:100){
+index <- c(index,list_results[[i]]$plants[1])
+}
+table(index)
+
+which(index=="1")
+```
+
+
+
 Mean Niche Breadth
 ```{r}
-pcom_abund <- as.data.frame(run1$plants) %>% group_by(., V2) %>% summarize(., across(everything(), sum)) #create community abundance matrix by summing across sites (V2)
+plot(x=1, y=1, xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Plants", xlim=c(0,3001), ylim=c(0,0.2))
+for(i in which(index=="1")){
+  pcom_abund <- as.data.frame(list_results[[i]]$plants) %>% group_by(., V2) %>% summarize(., across(everything(), sum)) #create community abundance matrix by summing across sites (V2)
+  
+  WmeanVar <- apply(pcom_abund[,3:ncol(pcom_abund)]/rowSums(pcom_abund[,3:ncol(pcom_abund)]), MARGIN=1, FUN=function(X){ #Input into this function is the relative abundances of each species
+    sum(X*list_results[[i]]$p_traitV) #multiply the mean trait value by relative abundances at each timestep, then return the sum
+    }
+  )
+  points(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", col=alpha("black", alpha=0.25))
+}
 
-WmeanVar <- apply(pcom_abund[,3:ncol(pcom_abund)]/rowSums(pcom_abund[,3:ncol(pcom_abund)]), MARGIN=1, FUN=function(X){ #Input into this function is the relative abundances of each species
-  sum(X*run1$p_traitV) #multiply the mean trait value by relative abundances at each timestep, then return the sum
-  }
-)
 
-plot(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Plants")
 
-acom_abund <- as.data.frame(run1$animals) %>% group_by(., V2) %>% summarize(., across(everything(), sum)) #create community abundance matrix by summing across sites (V2)
 
-WmeanVar <- apply(acom_abund[,3:ncol(acom_abund)]/rowSums(acom_abund[,3:ncol(acom_abund)]), MARGIN=1, FUN=function(X){ #Input into this function is the relative abundances of each species
-  sum(X*run1$a_traitV) #multiply the mean trait value by relative abundances at each timestep, then return the sum
-  }
-)
-plot(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Animals")
+plot(x=1, y=1, xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Animals", xlim=c(0,3001), ylim=c(0,0.2))
+for(i in which(index=="1")){
+  acom_abund <- as.data.frame(list_results[[i]]$animals) %>% group_by(., V2) %>% summarize(., across(everything(), sum)) #create community abundance matrix by summing across sites (V2)
+  
+  WmeanVar <- apply(acom_abund[,3:ncol(acom_abund)]/rowSums(acom_abund[,3:ncol(acom_abund)]), MARGIN=1, FUN=function(X){ #Input into this function is the relative abundances of each species
+    sum(X*list_results[[i]]$a_traitV) #multiply the mean trait value by relative abundances at each timestep, then return the sum
+    }
+  )
+  points(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", col=alpha("black", alpha=0.25))
+}
+
 ```
 Who's successfully colonizing?
 ```{r}

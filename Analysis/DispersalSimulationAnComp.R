@@ -55,8 +55,8 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
   }
   
   #pops <- NULL
-  p_pops_output <- cbind(c(1:5), rep(0,nsites),p_pops) #Make output dataframe; first column is site, second is timestep; then populations
-  a_pops_output <- cbind(c(1:5), rep(0,nsites),a_pops) #Make output dataframe; first column is site, second is timestep; then populations
+  p_pops_output <- cbind(c(1:nsites), rep(0,nsites),p_pops) #Make output dataframe; first column is site, second is timestep; then populations
+  a_pops_output <- cbind(c(1:nsites), rep(0,nsites),a_pops) #Make output dataframe; first column is site, second is timestep; then populations
 
   prior_richness <- 0 #setting as the starting point
   
@@ -286,7 +286,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
       p_pops_output <- rbind(p_pops_output, p_pops_temp)
       
       #pops <- rbind(pops, pops_temp)
-      if(t %% 10==0)
+      if(t %% 100==0)
         print(t)
   }
   outputlist <- list(plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
