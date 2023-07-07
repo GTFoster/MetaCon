@@ -274,7 +274,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         a_pops_output <- cbind(a_pops_output, c(rep(0,nrow(a_pops_output))))#add a 0 for every preceeding timestep
         #colnames(a_pops_output)[ncol(a_pops_output)] <- colnames(a_pops)[ncol(a_pops)] # rename based on the newest animal species
       }
-      a_pops_temp <- cbind(c(1:5), rep(t,nsites),a_pops)
+      a_pops_temp <- cbind(c(1:nsites), rep(t,nsites),a_pops)
       a_pops_output <- rbind(a_pops_output, a_pops_temp)
       
       
@@ -282,7 +282,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         p_pops_output <- cbind(p_pops_output, c(rep(0,nrow(p_pops_output))))
         #colnames(p_pops_output)[ncol(p_pops_output)] <- colnames(p_pops)[ncol(p_pops)] #  rename based on the newest plant species
       }
-      p_pops_temp <- cbind(c(1:5), rep(t,nsites),p_pops)
+      p_pops_temp <- cbind(c(1:nsites), rep(t,nsites),p_pops)
       p_pops_output <- rbind(p_pops_output, p_pops_temp)
       
       #pops <- rbind(pops, pops_temp)

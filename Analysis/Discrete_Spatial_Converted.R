@@ -6,7 +6,7 @@ library(parallel)
 
 
 #nsites <- 5
-nsites <- 15
+nsites <- 30
 factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
 coords <- data.frame(x=runif(nsites), y=runif(nsites))
 eucdist <- dist(coords, diag=T, upper=T)
@@ -56,7 +56,7 @@ list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
 stopCluster(cl)
 time1 <- tictoc::toc()
 
-save(list_results, file="simulationNegative.Rda")
+save(list_results, file="simulationNegative_30sites.Rda")
 print("Done with negative")
 
 
@@ -76,7 +76,7 @@ list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
 stopCluster(cl)
 time2 <- tictoc::toc()
 
-save(list_results, file="simulationPositive.Rda")
+save(list_results, file="simulationPositive_30sites.Rda")
 print("Done with positive")
 
 
@@ -98,7 +98,7 @@ runSimulation()
 stopCluster(cl)
 time3 <- tictoc::toc()
 
-save(list_results, file="simulationNeutral.Rda")
+save(list_results, file="simulationNeutral_30sites.Rda")
 print("Done with neutral")
 
 
