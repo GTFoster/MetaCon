@@ -40,15 +40,10 @@ plot(a, layout=coords)
 E(a)$weights[1]
 
 val <- E(a)[1]
-val
-
 
 dists <- distance_table(a, directed = FALSE)
 dists <- igraph::distances(a)
 hist(dists)
-
-
-
 
 
 
