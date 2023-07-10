@@ -1,12 +1,57 @@
 
 library(scales)
 library(parallel)
+library(igraph)
 
-
-
-
-#nsites <- 5
+library(igraph)
 nsites <- 100
+
+
+A <- matrix(data=runif(nsites^2, 0,1),ncol=nsites)
+Asym <- A %*% t(A)
+class(Asym/max(Asym))
+
+library(igraph)
+nsites <- 100
+
+
+
+wi <-0.2 #Bernoulli probability of link within module
+ac <-0.05 #Bernoulli probability of link between module
+pref <- matrix(data=c(wi, ac, ac, ac, ac, #Create a preference matrix from the above vals
+             ac, wi, ac, ac, ac,
+             ac, ac, wi, ac, ac,
+             ac, ac, ac, wi, ac,
+             ac, ac, ac, ac, wi), ncol=5, byrow = TRUE)
+a <- igraph::sample_sbm(nsites, pref.matrix=pref, block.sizes = rep(20, nsites/20)) #Use sample_sbm to make a random graph
+
+com <- igraph::fastgreedy.community(a) #Find community identity
+
+igraph::modularity(a, membership=com$membership, weights=E(a)$weights) #Get resulting modularity
+hist(igraph::degree(a))
+igraph::vertex.connectivity(a)
+
+coords <- layout_nicely(a)
+eucdist <- dist(coords, diag=T, upper=T)
+dexpdist <- dexp(eucdist, rate=1)
+dexpsim <- 1/(1+as.matrix(dexpdist)) #This has a full distance matrix. Do I only assign the values for the sites connected in my original graph, or do I let them all have pairwise connections?
+
+plot(a, layout=coords)
+E(a)$weights[1]
+
+val <- E(a)[1]
+val
+
+
+dists <- distance_table(a, directed = FALSE)
+dists <- igraph::distances(a)
+hist(dists)
+
+
+
+
+
+
 factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
 coords <- data.frame(x=runif(nsites), y=runif(nsites))
 eucdist <- dist(coords, diag=T, upper=T)

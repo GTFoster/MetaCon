@@ -16,7 +16,7 @@ library(parallel)
 
 
 
-nsites <- 5
+nsites <- 15
 factor_sites <- as.factor(1:nsites) #This is important for the dispersal function down the road
 coords <- data.frame(x=runif(nsites), y=runif(nsites))
 eucdist <- dist(coords, diag=T, upper=T)
@@ -28,7 +28,7 @@ dexpsim <- 1/(1+as.matrix(dexpdist)) #Converting our distance matrix to a simila
 
 
 
-source(file="./DispersalSimulation.R") #load in our dispersal simulation function. rOxygen-style description available in file.
+source(file="./DispersalSimulationAnComp.R") #load in our dispersal simulation function. rOxygen-style description available in file.
 
 
 

@@ -25,6 +25,8 @@ load("mini_simulationNegative.Rda")
 run1 <- list_results[[2]]
 tail(run1$plants)
 
+neutral_5 <- list_results
+rm(list_results)
 ```
 
 Counting successful runs
@@ -42,7 +44,13 @@ which(index=="1")
 
 Mean Niche Breadth
 ```{r}
-plot(x=1, y=1, xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main="Plants", xlim=c(0,3001), ylim=c(0,0.2))
+plotPlantVariance <- function(list_results, title="plants"){
+  index <- NULL
+  for(i in 1:100){
+    index <- c(index,list_results[[i]]$plants[1])
+  }
+table(index)
+plot(x=1, y=1, xlab="time", ylab="Abundace-Weighted Mean Trait Variance", main=title, xlim=c(0,3001), ylim=c(0,0.2))
 for(i in which(index=="1")){
   pcom_abund <- as.data.frame(list_results[[i]]$plants) %>% group_by(., V2) %>% summarize(., across(everything(), sum)) #create community abundance matrix by summing across sites (V2)
   
@@ -52,7 +60,7 @@ for(i in which(index=="1")){
   )
   points(x=1:length(WmeanVar), y=WmeanVar, type="l", xlab="time", col=alpha("black", alpha=0.25))
 }
-
+}
 
 
 
@@ -68,6 +76,16 @@ for(i in which(index=="1")){
 }
 
 ```
+
+```{r}
+plotPlantVariance(negative_5, title="Plants:Negative, 5 sites")
+plotPlantVariance(neutral_5, title="Plants:Neutral, 5 sites")
+plotPlantVariance(positive_5, title="Plants:Positive, 5 sites")
+plotPlantVariance(neutral_15, title="Plants:Neutral, 15 sites")
+plotPlantVariance(positive_15, title="Plants:Positive, 15 sites")
+```
+
+
 Who's successfully colonizing?
 ```{r}
 colonization <- apply(pcom_abund[,3:ncol(pcom_abund)],2, function(x) pcom_abund$V2[x !=0][1])
