@@ -17,7 +17,6 @@ dexpsim <- 1/(1+as.matrix(dexpdist)) #Converting our distance matrix to a simila
 
 
 
-
 source(file="./DispersalSimulationAnComp.R") #load in our dispersal simulation function. rOxygen-style description available in file.
 
 
