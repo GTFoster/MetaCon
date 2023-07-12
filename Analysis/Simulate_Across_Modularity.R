@@ -4,6 +4,7 @@ library(parallel)
 library(igraph)
 
 library(igraph)
+library(Matrix)
 nsites <- 100
 
 
@@ -11,30 +12,55 @@ A <- matrix(data=runif(nsites^2, 0,1),ncol=nsites)
 Asym <- A %*% t(A)
 class(Asym/max(Asym))
 
-library(igraph)
 nsites <- 100
 
 
 
-wi <-0.2 #Bernoulli probability of link within module
-ac <-0.05 #Bernoulli probability of link between module
+wi <-0.25 #Bernoulli probability of link within module
+ac <-0.01 #Bernoulli probability of link between module
 pref <- matrix(data=c(wi, ac, ac, ac, ac, #Create a preference matrix from the above vals
              ac, wi, ac, ac, ac,
              ac, ac, wi, ac, ac,
              ac, ac, ac, wi, ac,
              ac, ac, ac, ac, wi), ncol=5, byrow = TRUE)
 a <- igraph::sample_sbm(nsites, pref.matrix=pref, block.sizes = rep(20, nsites/20)) #Use sample_sbm to make a random graph
-
 com <- igraph::fastgreedy.community(a) #Find community identity
+V(a)$color <- com$membership
 
 igraph::modularity(a, membership=com$membership, weights=E(a)$weights) #Get resulting modularity
 hist(igraph::degree(a))
 igraph::vertex.connectivity(a)
 
+
+
+
 coords <- layout_nicely(a)
-eucdist <- dist(coords, diag=T, upper=T)
-dexpdist <- dexp(eucdist, rate=1)
+#coords <- igraph::layout_with_kk(a)
+coords
+coords[,1] <- coords[,1]/max(abs(coords[,1])) #rescale to between -1 to 1 so dexp is comparable to my random graphs
+coords[,2] <- coords[,2]/max(abs(coords[,2]))#rescale to between -1 to 1 so dexp is comparable to my random graphs
+eucdist <- dist(coords, diag=T, upper=T)#r
+dexpdist <- dexp(eucdist, rate=10) #This rate parameter is somewhat arbitrarily chosen. 
 dexpsim <- 1/(1+as.matrix(dexpdist)) #This has a full distance matrix. Do I only assign the values for the sites connected in my original graph, or do I let them all have pairwise connections?
+range(dexpsim)
+empty <- matrix(data=1, nrow=100, ncol=100)
+diag(empty) <- 0
+
+graph <- graph_from_adjacency_matrix(adjmatrix = empty, mode=c("undirected"))
+
+is.directed(graph)
+isSymmetric(empty)
+graph
+E(graph)$weights <- triu(dexpsim)[triu(dexpsim)!=1]
+triu(empty)
+fastgreedy.community(graph, weights=E(graph)$weights)$membership
+
+#Problem: We create a modular graph that contains 5 submodules using sample_sbm(). However, this only creates 0-1 edges (no weight)
+#To make weights approximating a real-world landscape, we layout_nicely this graph, turn the coordinates into a euclidean distance matrix, run that through a exponential decay
+#And now we have a new graph, fully connected, where edgeweights are equivalent to the connectivity between sites.
+#The only downside to this is that due to this process, we no longer really have the same number of modules, and I'm not sure how much variability in modularity we have to control
+#When we degrade networks from a high modularity, the step probably needs done at the last step. I guess I'll do this by randomly swapping network link weights?
+igraph::modularity(graph, membership=fastgreedy.community(graph, weights=E(graph)$weights)$membership, weights=E(graph)$weights) #Get resulting modularity. 
 
 plot(a, layout=coords)
 E(a)$weights[1]
