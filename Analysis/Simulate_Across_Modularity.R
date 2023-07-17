@@ -5,6 +5,7 @@ library(igraph)
 
 library(igraph)
 library(Matrix)
+library(simplifyNet)
 nsites <- 100
 
 
@@ -24,10 +25,73 @@ a <- igraph::sample_sbm(nsites, pref.matrix=pref, block.sizes = rep(20, nsites/2
 com <- igraph::fastgreedy.community(a) #Find community identity
 V(a)$color <- com$membership
 
-igraph::modularity(a, membership=com$membership, weights=E(a)$weights) #Get resulting modularity
+coords <-layout_nicely(a)
+plot(a, layout=coords)
+
+
+empty <- matrix(data=1, nrow=nsites, ncol=nsites)
+diag(empty) <- 0
+graph <- graph_from_adjacency_matrix(adjmatrix = empty, mode=c("undirected"))
+E(graph)$weights <- dexpsim[t(combn(nrow(dexpsim), 2))]
+V(graph)$color <- com$membership
+igraph::fastgreedy.community(graph, weights=E(graph)$weights)
+igraph::fastgreedy.community(g2, weights=E(g2)$weights)
+
+g2 <- delete.edges(graph, which(E(graph)$weights > quantile(E(graph)$weights,0.2))) #This should be trimming down to only the 20% of closest links, but seems random. Looks like link weight is not being assigned correctly indexed.
+
+
+plot(g2, layout=coords)
+plot(a, layout=coords)
+for(i in 1:nsites){
+  if(all(V(a)$color[neighbors(a, v=i)]==V(a)$color[i])==FALSE){ #Check if this node has connections outside its module
+
+    E(a)[V(a)[color==1] %--% V(a)[color==2]]
+    
+    E(graph)$weights[E(graph)==E(a)[V(a)[color==1] %--% V(a)[color==2]]] #extract the weights of the intermodules
+  }
+}
+as_adjacency_matrix(graph)
+E(graph)$weight <- E(graph)$weights
+
+S <- simplifyNet::bestpath(graph)
+
+sg = simplifyNet::net.as(S, net.to="igraph", directed=FALSE)
+plot(sg)
+plot(graph)
+igraph::ecount(sg)/igraph::ecount(graph)#fraction of edges in the sparsifier
+
+
+#Generate random ER graph with uniformly random edge weights
+g = igraph::erdos.renyi.game(50, 0.1)
+igraph::E(g)$weight <- runif(length(igraph::E(g)))
+#Sparsify g via bestpath
+S = simplifyNet::bestpath(g, directed = FALSE, associative = TRUE) #Show edge list conversion
+sg = simplifyNet::net.as(S, net.to="igraph", directed=FALSE)
+igraph::ecount(sg)/igraph::ecount(graph)#fraction of edges in the sparsifier using bestpath
+
+
+effR <- simplifyNet::EffR(graph)
+Eff <- EffRSparse(graph, 100, effR, 24601)
+Effg <- simplifyNet::net.as(Eff, net.to="igraph", directed=F)
+igraph::ecount(Effg)/igraph::ecount(graph)
+modules <- igraph::fastgreedy.community(Effg, weights=E(Effg)$weights) #Similiar to my problem before, the new sparsified graph shows different modules than the sbm graph that it was buil upon :/
+
+V(Effg)$color <- modules$membership
+
+modularity(Effg, weights=E(Effg)$weights, membership=modules$membership) 
+
+plot(Effg)
+
+EffRSparse(network, q, effR, 24601, n)
+get.adjacency.sparse(graph)
+E(graph)$weights
+
+igraph::modularity(g2, membership=com$membership, weights=E(g2)$weights) #Get resulting modularity
 hist(igraph::degree(a))
 igraph::vertex.connectivity(a)
 plot(a)
+
+#####################################################################################
 
 
 
@@ -37,18 +101,31 @@ coords
 coords[,1] <- coords[,1]/max(abs(coords[,1])) #rescale to between -1 to 1 so dexp is comparable to my random graphs
 coords[,2] <- coords[,2]/max(abs(coords[,2]))#rescale to between -1 to 1 so dexp is comparable to my random graphs
 eucdist <- dist(coords, diag=T, upper=T)#r
-dexpdist <- dexp(eucdist, rate=10) #This rate parameter is somewhat arbitrarily chosen. 
-dexpsim <- 1/(1+as.matrix(dexpdist)) #This has a full distance matrix. Do I only assign the values for the sites connected in my original graph, or do I let them all have pairwise connections?
+dexpdist <- dexp(eucdist, rate=2.5) #This rate parameter is somewhat arbitrarily chosen. Used 10 in other simulations, but relized this gives a bunch of nearly 1 connectivities.
+dexpsim<- 1/(1+as.matrix(dexpdist)) #This has a full distance matrix. Do I only assign the values for the sites connected in my original graph, or do I let them all have pairwise connections?
+hist(x)
+hist(x[x>quantile(0.8, x)])
+
 
 
 empty <- matrix(data=1, nrow=nsites, ncol=nsites)
 diag(empty) <- 0
+dexpsim[upper.tri(dexpsim)==TRUE]
 
 graph <- graph_from_adjacency_matrix(adjmatrix = empty, mode=c("undirected"))
 
-E(graph)$weights <- triu(dexpsim)[triu(dexpsim)!=1]
-E(graph)[c(2,29)]
-E(graph)$weights[c(2,29)]
+
+
+
+triu(dexpsim)[triu(dexpsim)!=1][1:3]
+dexpsim[upper.tri(dexpsim)==TRUE][1:3]
+dexpsim[1:4,1:4]
+?triu
+result <- dexpsim[t(combn(nrow(dexpsim), 2))] #This code extracts the non-diagonal upper triangle values of the distance matrix rowwise (so they're in an order that can be assigned to the rowweights)
+
+tail(a)
+E(graph)$weights <- dexpsim[t(combn(nrow(dexpsim), 2))] #This code extracts the non-diagonal upper triangle values of the distance matrix rowwise (so they're in an order that can be assigned to the rowweights)
+
 fastgreedy.community(graph, weights=E(graph)$weights)
 cluster_edge_betweenness(graph, weights=E(graph)$weights)
 
@@ -58,8 +135,8 @@ cluster_edge_betweenness(graph, weights=E(graph)$weights)
 #The only downside to this is that due to this process, we no longer really have the same number of modules, and I'm not sure how much variability in modularity we have to control
 #When we degrade networks from a high modularity, the step probably needs done at the last step. I guess I'll do this by randomly swapping network link weights?
 quantile(E(graph)$weights,0.8)
-g2 <- delete.edges(graph, which(E(graph)$weights < quantile(E(graph)$weights,0.8))) #This should be trimming down to only the 20% of closest links, but seems random. Looks like link weight is not being assigned correctly indexed.
-
+g2 <- delete.edges(graph, which(E(graph)$weights < quantile(E(graph)$weights,0.95))) #This should be trimming down to only the 20% of closest links, but seems random. Looks like link weight is not being assigned correctly indexed.
+hist(E(graph)$weights)
 plot(a, layout=coords)
 plot(g2, layout=coords)
 igraph::modularity(graph, membership=fastgreedy.community(graph, weights=E(graph)$weights)$membership, weights=E(graph)$weights) #Get resulting modularity. 
