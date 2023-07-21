@@ -21,7 +21,10 @@ coords <- layout_nicely(a) #use layout-nicely to enforce 2D spatial orientation
 coords[,1] <- coords[,1]/max(abs(coords[,1])) #rescale to between -1 to 1 so dexp is comparable to my random graphs
 coords[,2] <- coords[,2]/max(abs(coords[,2]))#rescale to between -1 to 1 so dexp is comparable to my random graphs
 eucdist <- dist(coords, diag=T, upper=T) #Create distance matrix from coordinates. 
-dexpdist <- dexp(eucdist, rate=2.5) #This rate parameter is somewhat arbitrarily chosen. Used 10 in other simulations, but relized this gives a bunch of nearly 1 connectivities.
+dexpdist <- dexp(eucdist, rate=2.5) #This rate parameter is somewhat arbitrarily chosen. Used 10 in other simulations, but realized this gives a bunch of nearly 1 connectivities.
+
+
+
 dexpsim <- as.matrix(dexpdist/max(dexpdist)) #NOTE: Changed from previous formulation. Realized that a distance score wasn't great to combine with network weighting below
 #plot(a, layout=coords)
 
@@ -76,6 +79,9 @@ while(i<500){
 }
 
 plot(x=output$t, y=output$mode)
+
+
+
 #####################################################################################
 
 
