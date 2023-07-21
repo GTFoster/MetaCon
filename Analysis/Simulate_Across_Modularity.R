@@ -91,8 +91,6 @@ simModularity <- function(nsites, wi, ac){
 
 iteraction <- simModularity(nsites=100, wi=0.4, ac=0.01)
 mat1 <- as.matrix(as_adjacency_matrix(iteraction[[1]]$net, attr="weight"))
-?as_adjacency_matrix
-iteraction[[1]]
 #plot(x=output$t, y=output$mode)
 #####################################################################################
 
