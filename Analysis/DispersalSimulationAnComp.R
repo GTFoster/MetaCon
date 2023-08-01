@@ -55,13 +55,18 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
   }
   
   #pops <- NULL
-  p_pops_output <- cbind(c(1:nsites), rep(0,nsites),p_pops) #Make output dataframe; first column is site, second is timestep; then populations
-  a_pops_output <- cbind(c(1:nsites), rep(0,nsites),a_pops) #Make output dataframe; first column is site, second is timestep; then populations
+  #p_pops_output <- cbind(c(1:nsites), rep(0,nsites),p_pops) #Make output dataframe; first column is site, second is timestep; then populations
+  #a_pops_output <- cbind(c(1:nsites), rep(0,nsites),a_pops) #Make output dataframe; first column is site, second is timestep; then populations
 
   prior_richness <- 0 #setting as the starting point
   
   int_fail <- FALSE #Dummy variable for integral try statement
   lambda_fail <- FALSE #Dummy variable for rpois() projection
+  
+  P_TraitVTot <- NULL #Create a bunch of empty objects so we can rbind weighted mean trait variance to later
+  A_TraitVTot <- NULL
+  P_WTraitMean_output <- NULL
+  A_WTraitMean_output <-  NULL
   
   for(t in 1:num_timeSteps){
     richness <- ncol(a_pops)+ncol(p_pops)
@@ -270,25 +275,41 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
       #meanV <- rbind(meanV, sum(a_traitV)/n_animals)
       #if(t %% 100==0)
       
-      if((ncol(a_pops)+2)>ncol(a_pops_output)){ #change the output dimensions to account for a new species
-        a_pops_output <- cbind(a_pops_output, c(rep(0,nrow(a_pops_output))))#add a 0 for every preceeding timestep
+      #if((ncol(a_pops)+2)>ncol(a_pops_output)){ #change the output dimensions to account for a new species
+        #a_pops_output <- cbind(a_pops_output, c(rep(0,nrow(a_pops_output))))#add a 0 for every preceeding timestep
         #colnames(a_pops_output)[ncol(a_pops_output)] <- colnames(a_pops)[ncol(a_pops)] # rename based on the newest animal species
-      }
+      #}
       a_pops_temp <- cbind(c(1:nsites), rep(t,nsites),a_pops)
-      a_pops_output <- rbind(a_pops_output, a_pops_temp)
+      #a_pops_output <- rbind(a_pops_output, a_pops_temp)
       
       
-      if((ncol(p_pops)+2)>ncol(p_pops_output)){ #change the output dimensions to account for a new species
-        p_pops_output <- cbind(p_pops_output, c(rep(0,nrow(p_pops_output))))
+      #if((ncol(p_pops)+2)>ncol(p_pops_output)){ #change the output dimensions to account for a new species
+        #p_pops_output <- cbind(p_pops_output, c(rep(0,nrow(p_pops_output))))
         #colnames(p_pops_output)[ncol(p_pops_output)] <- colnames(p_pops)[ncol(p_pops)] #  rename based on the newest plant species
-      }
+      #}
       p_pops_temp <- cbind(c(1:nsites), rep(t,nsites),p_pops)
-      p_pops_output <- rbind(p_pops_output, p_pops_temp)
+      #p_pops_output <- rbind(p_pops_output, p_pops_temp)
       
       #pops <- rbind(pops, pops_temp)
-      if(t %% 100==0)
+      if(t %% 500==0)
         print(t)
+      
+      P_WTraitMean_site <- data.frame(site=1:nsites, t=t, WVMean=NA)
+      A_WTraitMean_site <- data.frame(site=1:nsites, t=t, WVMean=NA)
+      for(i in 1:nsites){
+        P_WTraitMean_site$WVMean[i] <- sum(p_pops[i,]*p_traitV)/sum(p_pops[i,])
+        A_WTraitMean_site[i] <- sum(a_pops[i,]*a_traitV)/sum(a_pops[i,])
+      }
+      
+      P_WTraitMean <- sum(colSums(p_pops)*p_traitV/sum(p_pops))
+      A_WTraitMean <- sum(colSums(a_pops)*a_traitV/sum(a_pops))
+      
+      P_WTraitMean_output <- rbind(P_WTraitMean_output, P_WTraitMean_site)
+      A_WTraitMean_output <- rbind(A_WTraitMean_output, P_WTraitMean_site)
+      
+      P_TraitVTot <- rbind(P_TraitVTot, P_WTraitMean)
+      A_TraitVTot <- rbind(A_TraitVTot, A_WTraitMean)
   }
-  outputlist <- list(plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
+  outputlist <- list(P_TraitVT_total=P_TraitVTot, A_TraitVT_total=A_TraitVTot, plants_VMeanSite=P_WTraitMean_output, animals_VMeanSite=A_WTraitMean_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
   return(outputlist) #Specify return object
 }

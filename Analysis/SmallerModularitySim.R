@@ -145,7 +145,7 @@ print("Done with negative")
 tictoc::tic()
 cl <- makeCluster(detectCores()-2, outfile="")
 runSimulation <- function() {
-  try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 3000, invProb = 0.05))
+  try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = dexpsim, r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 10, invProb = 0.05))
 }
 clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"))
 
