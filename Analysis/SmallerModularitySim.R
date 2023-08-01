@@ -125,10 +125,6 @@ runSimulation <- function() {
   return(list(high=x1, med=x2, low=x3, mods=c(nets[[1]]$mode,nets[[2]]$mode,nets[[3]]$mode)))
 }
 
-ret <- sapply(X=1:10, FUN=function(i){
-  runSimulation()
-})
-
 
 clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"))
 
