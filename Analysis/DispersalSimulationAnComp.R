@@ -33,7 +33,7 @@
 #' @return outputlist$p_traitV vector of numbers; analogous form as above
 #' 
 
-runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, n_animals, r, mup, mua, o, lambda, K, e_thresh, invProb, invade_size, num_timeSteps=500){
+runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, n_animals, r, mup, mua, o, lambda, K, e_thresh, invProb, invade_size, num_timeSteps=500, seedstart=0){
   factor_sites <- as.factor(1:nsites)
   #Setting up initial plant pops
   p_pops <- matrix(data=round(runif(nsites*n_plants, 1, 200)), nrow=nsites, ncol=n_plants) #now, our pops are a matrix instead of a vector in order to track across multiple sites
@@ -69,6 +69,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
   A_WTraitMean_output <-  NULL
   
   for(t in 1:num_timeSteps){
+    set.seed(i+seedstart)
     richness <- ncol(a_pops)+ncol(p_pops)
     if(richness > prior_richness){ #Check if we've updated the number of spp in the community
       #if so, recalculate niche overlap and competition matrices

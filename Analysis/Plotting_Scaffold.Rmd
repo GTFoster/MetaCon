@@ -20,6 +20,12 @@ load("mini_simulationNegative.Rda")
 ```
 
 ```{r}
+x <- list_results[[1]]
+
+plot(x$high$P_TraitVT_total)
+```
+
+```{r}
 #str(list_results)
 
 run1 <- list_results[[2]]
