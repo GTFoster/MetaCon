@@ -137,7 +137,7 @@ list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
 stopCluster(cl)
 time1 <- tictoc::toc()
 
-save(list_results, file="../Data/simulationNegative_100sites_Mod_seed0.Rda")
+save(list_results, file="../Data/simulationNegative_100sites_Mod_seed101.Rda")
 print("Done with negative")
 
 
@@ -161,7 +161,7 @@ list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
 stopCluster(cl)
 time2 <- tictoc::toc()
 
-save(list_results, file="../Data/simulationPositive_100sites_Mod_seed0.Rda")
+save(list_results, file="../Data/simulationPositive_100sites_Mod_seed101.Rda")
 print("Done with positive")
 
 
@@ -187,7 +187,7 @@ runSimulation()
 stopCluster(cl)
 time3 <- tictoc::toc()
 
-save(list_results, file="../Data/simulationNeutral_100sites_Mod_seed0.Rda")
+save(list_results, file="../Data/simulationNeutral_100sites_Mod_seed101.Rda")
 print("Done with neutral")
 
 save(time1, time2, time3, file="timing.Rda") #Save out output time objects
