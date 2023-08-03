@@ -69,7 +69,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
   A_WTraitMean_output <-  NULL
   
   for(t in 1:num_timeSteps){
-    set.seed(i+seedstart)
+    set.seed(t+seedstart)
     richness <- ncol(a_pops)+ncol(p_pops)
     if(richness > prior_richness){ #Check if we've updated the number of spp in the community
       #if so, recalculate niche overlap and competition matrices

@@ -107,3 +107,52 @@ Community vs Population Stability?
 
 ```
 
+
+```{r}
+Positive_0 <- list_results
+Neu_0 <- list_results
+Neg_0 <- list_results
+
+plot(x=1:1000, y=NULL, ylim=c(0,0.25), ylab="Mean Abundance-Weighted Trait Variance in Community", xlab="Time", main="Plants")
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$high$P_TraitVT_total)
+}
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$med$P_TraitVT_total, col="blue")
+}
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$low$P_TraitVT_total, col="red")
+}
+
+
+plot(x=1:1000, y=NULL, ylim=c(0,0.25), ylab="Mean Abundance-Weighted Trait Variance in Community", xlab="Time", main="Pollinators")
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$high$A_TraitVT_total)
+}
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$med$A_TraitVT_total, col="blue")
+}
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$low$A_TraitVT_total, col="red")
+}
+```
+
+
+```{r}
+plot(x=1:1000, y=NULL, ylim=c(0.05,0.25), ylab="Mean Abundance-Weighted Trait Variance in Community", xlab="Time", main="Plants")
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$med$P_TraitVT_total, col="dark green")
+    lines(x=1:1000, y=Neg_0[[i]]$med$P_TraitVT_total, col="red")
+    lines(x=1:1000, y=Neu_0[[i]]$med$P_TraitVT_total, col="brown")
+}
+
+plot(x=1:1000, y=NULL, ylim=c(0.05,0.25), ylab="Mean Abundance-Weighted Trait Variance in Community", xlab="Time", main="Pollinators")
+for(i in 1:100){
+  lines(x=1:1000, y=Positive_0[[i]]$med$A_TraitVT_total, col="dark green")
+  lines(x=1:1000, y=Neu_0[[i]]$med$A_TraitVT_total, col="brown")
+  lines(x=1:1000, y=Neg_0[[i]]$med$A_TraitVT_total, col="red")
+
+}
+
+```
+
