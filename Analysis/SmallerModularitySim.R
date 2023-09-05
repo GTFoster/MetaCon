@@ -95,8 +95,8 @@ mat1 <- as.matrix(as_adjacency_matrix(iteraction[[1]]$net, attr="weight"))
 
 
 
-source(file="./DispersalSimulationAnComp.R") #load in our dispersal simulation function. rOxygen-style description available in file.
-
+source(file="./BigDispersalSimulationAnComp.R") #load in our dispersal simulation function. rOxygen-style description available in file.
+ 
 
 
 
@@ -110,7 +110,8 @@ source(file="./DispersalSimulationAnComp.R") #load in our dispersal simulation f
 
 
 tictoc::tic()
-num_iterations <- 100
+num_iterations <- 20
+seedstarterer <- 0 
 #num_iterations <- 4
 
 # Set up the cluster for parallelization
@@ -119,9 +120,9 @@ cl <- makeCluster(detectCores()-2, outfile="")
 # Define a function to run the simulation
 runSimulation <- function() {
   nets <- simModularity(nsites=100, wi=0.4, ac=0.01)
-  x1 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=202))
-  x2 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=202))
-  x3 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=202))
+  x1 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=seedstarter=0))
+  x2 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=seedstarter=0))
+  x3 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=seedstarter=0))
   return(list(high=x1, med=x2, low=x3, mods=c(nets[[1]]$mode,nets[[2]]$mode,nets[[3]]$mode)))
 }
 
@@ -133,22 +134,24 @@ list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
   runSimulation()
 })
 
+
 # Stop the cluster
 stopCluster(cl)
 time1 <- tictoc::toc()
 
-save(list_results, file="../Data/simulationNegative_100sites_Mod_seed101.Rda")
+save(list_results, file="../Data/bigSimulationNegative_100sites_Mod_seed0_20.Rda")
 print("Done with negative")
-
+rm(list_results)
+gc()
 
 
 tictoc::tic()
 cl <- makeCluster(detectCores()-2, outfile="")
 runSimulation <- function() {
   nets <- simModularity(nsites=100, wi=0.4, ac=0.01)
-  x1 <- try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=202))
-  x2 <- try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=202))
-  x3 <- try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=202))
+  x1 <- try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=seedstarter=0))
+  x2 <- try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=seedstarter=0))
+  x3 <- try(runDispersalSim(nsites = nsites, disptype = "positiveComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=seedstarter=0))
   return(list(high=x1, med=x2, low=x3, mods=c(nets[[1]]$mode,nets[[2]]$mode,nets[[3]]$mode)))
 }
 clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"))
@@ -161,18 +164,19 @@ list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
 stopCluster(cl)
 time2 <- tictoc::toc()
 
-save(list_results, file="../Data/simulationPositive_100sites_Mod_seed101.Rda")
+save(list_results, file="../Data/bigSimulationPositive_100sites_Mod_seed0_20.Rda")
 print("Done with positive")
-
+rm(list_results)
+gc()
 
 
 tictoc::tic()
 cl <- makeCluster(detectCores()-2, outfile="")
 runSimulation <- function() {
   nets <- simModularity(nsites=100, wi=0.4, ac=0.01)
-  x1 <- try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=202))
-  x2 <- try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=202))
-  x3 <- try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=202))
+  x1 <- try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=seedstarter=0))
+  x2 <- try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=seedstarter=0))
+  x3 <- try(runDispersalSim(nsites = nsites, disptype = "neutralComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 1000, invProb = 0.05, seedstart=seedstarter=0))
   return(list(high=x1, med=x2, low=x3, mods=c(nets[[1]]$mode,nets[[2]]$mode,nets[[3]]$mode)))
 }
 clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"))
@@ -187,7 +191,9 @@ runSimulation()
 stopCluster(cl)
 time3 <- tictoc::toc()
 
-save(list_results, file="../Data/simulationNeutral_100sites_Mod_seed101.Rda")
+save(list_results, file="../Data/bigsimulationNeutral_100sites_Mod_seed0_20.Rda")
 print("Done with neutral")
+rm(list_results)
+gc()
 
 save(time1, time2, time3, file="timing.Rda") #Save out output time objects
