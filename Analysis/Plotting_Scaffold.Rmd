@@ -146,12 +146,119 @@ for(i in 1:100){
     lines(x=1:1000, y=Neu_0[[i]]$med$P_TraitVT_total, col="brown")
 }
 
-plot(x=1:1000, y=NULL, ylim=c(0.05,0.25), ylab="Mean Abundance-Weighted Trait Variance in Community", xlab="Time", main="Pollinators"+)
+plot(x=1:1000, y=NULL, ylim=c(0.05,0.25), ylab="Mean Abundance-Weighted Trait Variance in Community", xlab="Time", main="Pollinators")
 for(i in 1:100){
   lines(x=1:1000, y=Positive_0[[i]]$med$A_TraitVT_total, col="dark green")
   lines(x=1:1000, y=Neu_0[[i]]$med$A_TraitVT_total, col="brown")
   lines(x=1:1000, y=Neg_0[[i]]$med$A_TraitVT_total, col="red")
 }
+
+```
+
+
+
+```{r}
+plot(x=1:length(list_results[[1]]$high$P_TraitVT_total), y=list_results[[1]]$high$P_TraitVT_total, type="l", ylim=c(0.05,0.25))
+for(i in 2:100){
+  lines(x=1:length(list_results[[i]]$high$P_TraitVT_total), y=list_results[[i]]$high$P_TraitVT_total)
+}
+
+plot(x=1:length(list_results[[1]]$med$P_TraitVT_total), y=list_results[[1]]$med$P_TraitVT_total, type="l", ylim=c(0.05,0.25))
+for(i in 2:100){
+  lines(x=1:length(list_results[[i]]$med$P_TraitVT_total), y=list_results[[i]]$med$P_TraitVT_total)
+}
+
+plot(x=1:length(list_results[[1]]$low$P_TraitVT_total), y=list_results[[1]]$low$P_TraitVT_total, type="l", ylim=c(0.05,0.25))
+for(i in 2:100){
+  lines(x=1:length(list_results[[i]]$low$P_TraitVT_total), y=list_results[[i]]$low$P_TraitVT_total)
+}
+
+
+plot(x=1:length(list_results[[1]]$high$A_TraitVT_total), y=list_results[[1]]$high$A_TraitVT_total, type="l", ylim=c(0.05,0.25))
+for(i in 2:100){
+  lines(x=1:length(list_results[[i]]$high$A_TraitVT_total), y=list_results[[i]]$high$A_TraitVT_total)
+}
+
+plot(x=1:length(list_results[[1]]$med$A_TraitVT_total), y=list_results[[1]]$med$A_TraitVT_total, type="l", ylim=c(0.05,0.25))
+for(i in 2:100){
+  lines(x=1:length(list_results[[i]]$med$A_TraitVT_total), y=list_results[[i]]$med$A_TraitVT_total)
+}
+
+plot(x=1:length(list_results[[1]]$low$A_TraitVT_total), y=list_results[[1]]$low$A_TraitVT_total, type="l", ylim=c(0.05,0.25))
+for(i in 2:100){
+  lines(x=1:length(list_results[[i]]$low$A_TraitVT_total), y=list_results[[i]]$low$A_TraitVT_total)
+}
+```
+
+Extracting our 
+```{r}
+mod <- 1
+modtreatments <- c("high", "med", "low")
+output <- data.frame(generation=NULL, PVT=NULL, AVT=NULL, mod=NULL, treatment=NULL, replicate=NULL)
+length(list_results)
+for(i in 1:length(list_results)){ #Extract from each replicate
+  for(j in 1:3){ #Each replicate has three modularity treatments. Extract from each
+    if("plants" %in% names(list_results[[i]][[j]])){
+      next
+    }
+  ret <- data.frame(generation=1:length(list_results[[i]][[j]]$P_TraitVT_total), PVT=list_results[[i]][[j]]$P_TraitVT_total,AVT=list_results[[i]][[j]]$A_TraitVT_total,mod=list_results[[i]]$mods[[j]],treatment=modtreatments[j], replicate=i)
+  output <- rbind(output, ret)
+  }
+}
+```
+Model structure: 
+My exponential decay model, where my actually decay is based on regression of my modularity values. So I guess this is a hierarchical approach?
+```{r}
+tiny <- dplyr::filter(output, replicate==1, treatment=="high")
+plot(x=tiny$generation, y=tiny$PVT)
+plot(x=tiny$generation, y=log(tiny$PVT))
+
+
+val <- lm(log(PVT)~generation|, data=tiny)
+summary(val)
+
+
+
+library(lme4)
+library(nlme)
+
+lme(PVT~generation+mod, data=tiny)
+lme(PVT~generation|mod, data=tiny)
+```
+A more tractable approach to start with here is to fit exponential decay to each of our models, and then correlate the result with the modularity value. Let's see what this does:
+
+```{r}
+
+model <- lm(log(PVT)~generation, data=tiny)
+data.frame(mod=tiny$mod[1], intercept=model$coefficients[1], decay=model$coefficients[2])
+
+output$ID <- as.factor(paste(output$replicate, output$treatment, sep=""))
+
+model_out <- NULL
+for(i in 1:length(unique(output$ID))){
+  temp <- dplyr::filter(output, ID==unique(output$ID)[i])
+  model <- lm(log(PVT)~generation, data=temp)
+  temp_frame <- data.frame(mod=temp$mod[1], intercept=model$coefficients[1], decay=model$coefficients[2])
+  model_out <- rbind(model_out, temp_frame)
+}
+
+plot(x=model_out$mod, y=model_out$decay)
+plot(x=model_out$mod, y=model_out$intercept)
+```
+
+Don't actually see much of a relationship, but according to a spearman's rank correlation we actually do have p < 0.05, with a negative rho.
+
+```{r}
+cor.test(model_out$mod, model_out$decay, method="spearman")
+cor.test(model_out$mod, model_out$intercept, method="spearman")
+```
+
+```{r}
+plot(x=scale(output$PVT),y=scale(output$AVT))
+lines(x=-3:3,y=-3:3, col="red")
+
+VT_lm<- lm(PVT~AVT,data=output)
+summary(VT_lm)
 
 ```
 
