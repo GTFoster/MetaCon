@@ -314,6 +314,7 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
       P_TraitVTot <- rbind(P_TraitVTot, P_WTraitMean)
       A_TraitVTot <- rbind(A_TraitVTot, A_WTraitMean)
   }
-  outputlist <- list(plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV)
+  outputlist <- list(plants=p_pops_output, animals=a_pops_output, a_traitsM=a_traitM, a_traitV=a_traitV, p_traitsM=p_traitM, p_traitV=p_traitV, RSpecPoll=propOutputtemp, RSpecPlant=pollBenefitsOutput)
   return(outputlist) #Specify return object
 }
+

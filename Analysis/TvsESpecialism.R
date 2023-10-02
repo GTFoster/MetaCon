@@ -95,7 +95,7 @@ mat1 <- as.matrix(as_adjacency_matrix(iteraction[[1]]$net, attr="weight"))
 
 
 
-source(file="./BigDispersalSimulationAnComp.R") #load in our dispersal simulation function. rOxygen-style description available in file.
+source(file="./TvsESpecialism_Sim.R") #load in our dispersal simulation function. rOxygen-style description available in file.
  
 
 
