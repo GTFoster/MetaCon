@@ -110,7 +110,7 @@ source(file="./TvsESpecialism_Sim.R") #load in our dispersal simulation function
 
 
 tictoc::tic()
-num_iterations <- 20
+num_iterations <- 1000
 seedstarterer <- 0 
 #num_iterations <- 4
 

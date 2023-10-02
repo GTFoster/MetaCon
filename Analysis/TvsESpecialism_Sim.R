@@ -68,6 +68,9 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
   P_WTraitMean_output <- NULL
   A_WTraitMean_output <-  NULL
   
+  propOutputtemp <- list() #Set up our realized specialism output object
+  pollBenefitsOutput <- list() #same for plants
+  
   for(t in 1:num_timeSteps){
     set.seed(t+seedstart)
     propOutputtemp[[t]] <- list() #Make blank list entry for this timestep that we can fill in later with our plant benefit
