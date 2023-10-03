@@ -5,6 +5,7 @@ library(igraph)
 library(igraph)
 library(Matrix)
 library(simplifyNet)
+library(pryr)
 
 nsites <- 100
 wi <-0.4 #Bernoulli probability of link within module
@@ -132,6 +133,8 @@ clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"
 # Run the simulations in parallel
 list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
   runSimulation()
+  name <- paste("../Data/Mem_usage/Negtime", i, ".txt", sep="")
+  system(paste('free -g | cat > ', name, sep = ""))
 })
 
 
@@ -159,6 +162,8 @@ clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"
 # Run the simulations in parallel
 list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
   try(runSimulation())
+  name <- paste("../Data/Mem_usage/Postime", i, ".txt", sep="")
+  system(paste('free -g | cat > ', name, sep = ""))
 })
 
 stopCluster(cl)
@@ -184,9 +189,10 @@ clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"
 # Run the simulations in parallel
 list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
   runSimulation()
+  name <- paste("../Data/Mem_usage/Neutime", i, ".txt", sep="")
+  system(paste('free -g | cat > ', name, sep = ""))
 })
 
-runSimulation()
 
 stopCluster(cl)
 time3 <- tictoc::toc()
