@@ -5,7 +5,7 @@ library(igraph)
 library(igraph)
 library(Matrix)
 library(simplifyNet)
-library(pryr)
+
 
 nsites <- 100
 wi <-0.4 #Bernoulli probability of link within module
