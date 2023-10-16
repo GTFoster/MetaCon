@@ -110,43 +110,7 @@ source(file="./TvsESpecialism_Sim.R") #load in our dispersal simulation function
 
 
 
-tictoc::tic()
-num_iterations <- 1000
-seedstarterer <- 0 
-#num_iterations <- 4
 
-# Set up the cluster for parallelization
-cl <- makeCluster(detectCores()-2, outfile="")
-              
-# Define a function to run the simulation
-runSimulation <- function() {
-  nets <- simModularity(nsites=100, wi=0.4, ac=0.01)
-  x1 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=0))
-  x2 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=0))
-  x3 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=0))
-  return(list(high=x1, med=x2, low=x3, mods=c(nets[[1]]$mode,nets[[2]]$mode,nets[[3]]$mode)))
-}
-
-
-clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"))
-
-# Run the simulations in parallel
-list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
-  result <- runSimulation()
-  name <- paste("../Data/Mem_usage/Negtime", i, ".txt", sep="")
-  system(paste('free -g | cat > ', name, sep = ""))
-  return(result)
-})
-
-
-# Stop the cluster
-stopCluster(cl)
-time1 <- tictoc::toc()
-
-save(list_results, file="../Data/bigSimulationNegative_100sites_Mod_seed0_20.Rda")
-print("Done with negative")
-rm(list_results)
-gc()
 
 
 tictoc::tic()
@@ -202,6 +166,44 @@ time3 <- tictoc::toc()
 
 save(list_results, file="../Data/bigsimulationNeutral_100sites_Mod_seed0_20.Rda")
 print("Done with neutral")
+rm(list_results)
+gc()
+
+tictoc::tic()
+num_iterations <- 1000
+seedstarterer <- 0 
+#num_iterations <- 4
+
+# Set up the cluster for parallelization
+cl <- makeCluster(detectCores()-2, outfile="")
+
+# Define a function to run the simulation
+runSimulation <- function() {
+  nets <- simModularity(nsites=100, wi=0.4, ac=0.01)
+  x1 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=0))
+  x2 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[2]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=0))
+  x3 <- try(runDispersalSim(nsites = nsites, disptype = "negativeComp", n_plants = 5, n_animals = 5, dexpsim = as.matrix(as_adjacency_matrix(nets[[1]]$net, attr="weight")), r = 0.5, mup = 0.1, mua = 0.1, o = 0.1, lambda = 0.9, K = 500, e_thresh = 2, invade_size = 5, disprobmax = 0.2, num_timeSteps = 8, invProb = 0.05, seedstart=0))
+  return(list(high=x1, med=x2, low=x3, mods=c(nets[[1]]$mode,nets[[2]]$mode,nets[[3]]$mode)))
+}
+
+
+clusterExport(cl, c("nsites", "runSimulation", "runDispersalSim","simModularity"))
+
+# Run the simulations in parallel
+list_results <- clusterApplyLB(cl, 1:num_iterations, function(i) {
+  result <- runSimulation()
+  name <- paste("../Data/Mem_usage/Negtime", i, ".txt", sep="")
+  system(paste('free -g | cat > ', name, sep = ""))
+  return(result)
+})
+
+
+# Stop the cluster
+stopCluster(cl)
+time1 <- tictoc::toc()
+
+save(list_results, file="../Data/bigSimulationNegative_100sites_Mod_seed0_20.Rda")
+print("Done with negative")
 rm(list_results)
 gc()
 

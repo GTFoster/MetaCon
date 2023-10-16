@@ -148,7 +148,9 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         pollDeath <- mua
         #print(propOfplants)
         a_change[,n] <- lambda*((1-(o[,n]%*%t(a_pops))/K))*propOfplants# - pollDeath
-        propOutputtemp[[t]][[n]] <- propOfplants #Save the benefit each pollinator receives from plants per capita as an entry in a list so we can compare expected vs realized specialism
+        if(t %% 10==0){ #Trying to make the output object smaller, so only saving every 10th timestep
+          propOutputtemp[[t %/% 10]][[n]] <- propOfplants #Save the benefit each pollinator receives from plants per capita as an entry in a list so we can compare expected vs realized specialism
+        }
       } #Animal Growth Rate
       
       p_change <- matrix(data=NA, nrow=nsites, ncol=n_plants)
@@ -158,7 +160,9 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
         pollBenefits <-rowSums(t(alpha[,n]*t(a_pops)))/(r+rowSums(t(alpha[,n]*t(a_pops))))
         plantDeath <- mup
         p_change[,n] <- r*plantCompetition*pollBenefits #- plantDeath# + o*rnorm(n=1, mean=0, sd=0.1) 
-        pollBenefitsOutput[[t]][[n]] <- pollBenefits
+        if(t %% 10==0){ #Trying to make the output object smaller, so only saving every 10th timestep
+          pollBenefitsOutput[[t %/% 10]][[n]] <- pollBenefits #Save the benefit each pollinator receives from plants per capita as an entry in a list so we can compare expected vs realized specialism
+        }
       }
       #Project to t+1
       for(i in 1:(n_plants*nsites)){

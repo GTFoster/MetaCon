@@ -1,0 +1,33 @@
+---
+title: "Memory_Analysis"
+author: "Grant Foster"
+date: "2023-10-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+output <- NULL
+for(i in 1:1000){
+  text <- read.table(file=paste("../Data/Mem_usage/Negtime",i,".txt", sep=""), fill = TRUE , header = TRUE)
+  output <- rbind(output, data.frame(used=text$used[1], open=text$free[1] + text$available[1], it=i))
+}
+
+plot(x=output$it, y=output$used, main="Negative-Competetively Mediated Dispersal", ylab="Used Mem (Gb)", xlab="iteration (1-1000)")
+```
+Missing iteration 129! This might be the one that's sticking it
+```{r}
+output <- NULL
+for(i in 131:1000){
+  text <- read.table(file=paste("../Data/Mem_usage/Postime",i,".txt", sep=""), fill = TRUE , header = TRUE)
+  output <- rbind(output, data.frame(used=text$used[1], open=text$free[1] + text$available[1], it=i))
+}
+
+
+plot(x=output$it, y=output$used, main="Positive Competetively-Mediated Dispersal", ylab="Used Mem (Gb)", xlab="iteration (1-1000)")
+```
+
