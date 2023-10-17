@@ -99,15 +99,13 @@ mat1 <- as.matrix(as_adjacency_matrix(iteraction[[1]]$net, attr="weight"))
 source(file="./TvsESpecialism_Sim.R") #load in our dispersal simulation function. rOxygen-style description available in file.
  
 
-
+num_iterations <- 1000
+seedstarterer <- 0 
 
 #list_results <- list()
 #for(i in 1:5){
 #list_results[[i]] <- try(runDispersalSim(nsites=nsites, disptype="negativeComp",n_plants=5, n_animals=5, dexpsim=dexpsim, r=0.5, mup=0.1, mua=0.1, o=0.1, lambda=0.9, K=100, e_thresh = 2, invade_size = 5, disprob = 0.2, num_timeSteps = 3000, invProb=0.5))
 #}
-
-
-
 
 
 
@@ -170,9 +168,6 @@ rm(list_results)
 gc()
 
 tictoc::tic()
-num_iterations <- 1000
-seedstarterer <- 0 
-#num_iterations <- 4
 
 # Set up the cluster for parallelization
 cl <- makeCluster(detectCores()-2, outfile="")
