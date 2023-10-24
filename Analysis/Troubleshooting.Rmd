@@ -126,6 +126,7 @@ tictoc::tic()
             temp <- try(integrate(min.f1f2, -Inf, Inf, mu1=a_traitM[a2], mu2=a_traitM[ia], sd1=a_traitV[a2], sd2=a_traitV[ia])$value) #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
             if(class(temp)=='try-error'){
               int_fail <- TRUE
+              print("int_failed")
               break()
             }
             o[ia, a2]<- temp
