@@ -140,18 +140,21 @@ runDispersalSim <- function(X, disptype, nsites, dexpsim, disprobmax, n_plants, 
     comp <- (K-u %*% t(a_pops))/K
     ben <- (alpha %*% t(p_pops))/(alpha %*% t(p_pops)+r) #This is the problem param
     bento <- (alpha %*% t(p_pops)) #Total sum of all plant ineractions for each pollinator species. The problem is that we're not penalizing based on the environmental context. (We have set per capita interactions, but these are depending on the environmental context. Need to update it)
-    attemptscaling <- alpha*t(t(alpha)/colSums(alpha)) #This is closer, but not quite right. It fits the alpha scaling based on the plant context, but doesn't actually take into account the abundance of competitiors when looking at plant interactions
+    attemptscaling <- alpha*t(t(alpha)/colSums(alpha)) #This is closer, but not quite right. It fits the alpha scaling based on the plant context, but doesn't actually take into account the abundance of competitors when looking at plant interactions
     scaled <- a_pops %*% attemptscaling
     rowSums(scaled)
+    
+    
+    alpha[,1]*t(a_pops) #For plant species 1, how much benefit does it get from each pollinator species in each site? 
     
       #Find out dpop/dt
       a_change <- matrix(data=NA, nrow=nsites, ncol=n_animals)
       for(n in 1:n_animals){
         propOfplants <- 0
-        nums <- alpha[n,]*p_pops/K#[,site] What if we standardize plant species to K? This seems like it might have worked to fix my problem
+        nums <- a_pops[,n]*alpha[n,]*p_pops#/K#[,site] What if we standardize plant species to K? This seems like it might have worked to fix my problem
         for(i in 1:n_plants){
           #Numerator-plant reward given by each focal pollinator
-          propOfplants <- propOfplants+nums[,i]/(r+sum(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
+          propOfplants <- propOfplants+nums[,i]/(r+rowSums(alpha[,i]*a_pops)) #Denominator-scaled by total available pollen
         }
         pollDeath <- mua
         #print(propOfplants)

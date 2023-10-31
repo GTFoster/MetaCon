@@ -261,4 +261,30 @@ VT_lm<- lm(PVT~AVT,data=output)
 summary(VT_lm)
 
 ```
+str(list_results[[1]]$high$RSpecPoll[[t]][[a]])
+
+Why is this big file only under 8 timesteps????? 
+```{r}
+str(list_results[[1]]$high$RSpecPoll)
+str(list_results[[1]]$high$RSpecPlant)
+
+dim(list_results[[1]]$high$animals)
+
+max(list_results[[1]]$high$animals[,2])
+
+ans <- list_results[[1]]$high$animals
+
+list_results[[1]]$high$p_traitV
+list_results[[1]]$high$a_traitV
+
+hist(unlist(list_results[[1]]$high$RSpecPlant[[1]]))
+
+
+
+sapply(list_results[[1]]$high$RSpecPoll, mean)
+```
+
+```{r}
+
+```
 
