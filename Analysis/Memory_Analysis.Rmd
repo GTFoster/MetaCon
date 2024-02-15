@@ -31,3 +31,14 @@ for(i in 131:1000){
 plot(x=output$it, y=output$used, main="Positive Competetively-Mediated Dispersal", ylab="Used Mem (Gb)", xlab="iteration (1-1000)")
 ```
 
+```{r}
+scale2 <- function(x, input){
+  val <- (1-x)*((input-0.05)/0.2)+x
+  return(val)
+}
+scale2(x=0, input=a_traitV)
+
+plot(x=a_traitV, y=scale2(x=0, input=a_traitV))
+lines(x=a_traitV, y=scale2(x=0.7, input=a_traitV))
+```
+
