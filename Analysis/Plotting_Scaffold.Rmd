@@ -273,3 +273,80 @@ for(i in 1:100){
 }
 ```
 
+
+
+```{r}
+first <- list_results[[5]]
+
+andat <- as.data.frame(first$high$animals)
+colnames(andat)[1] <- "time"
+colnames(andat)[2] <- "site"
+```
+
+
+```{r}
+sandat <- andat[, 1:7]
+colnames(sandat) <- c("site", "time", "a1", "a2", "a3", "a4", "a5")
+ 
+stavg <- sandat %>% group_by(., time) %>% dplyr::mutate(., a1m=mean(a1), a1sd=sd(a1),
+                                                  a2m=mean(a2), a2sd=sd(a2),
+                                                  a3m=mean(a3), a3sd=sd(a3),
+                                                  a4m=mean(a4), a4sd=sd(a4),
+                                                  a5m=mean(a5), a5sd=sd(a5))
+
+stavglong <- stavg %>% dplyr::select(., time, a1m, a2m, a3m, a4m, a5m) %>% unique() 
+stavglong <- pivot_longer(stavglong, cols=c(a1m, a2m, a3m, a4m, a5m))
+
+stavglong$name <- rep(1:5, 1001)
+
+sdlong <- stavg %>% dplyr::select(., time, a1sd, a2sd, a3sd, a4sd, a5sd) %>% unique() 
+
+sdlong <- pivot_longer(sdlong, cols=c(2:ncol(sdlong))) %>% dplyr::rename(., "std"="value")
+sdlong$name <- rep(1:5, 1001)
+
+
+stplot <- left_join(stavglong, sdlong, by=c("name", "time"))
+
+pdf(file="../Figures/animalPlot_ex.pdf", height=8.5, width=11)
+ggplot(data=stplot, aes(x=time, y=value, col=as.factor(name)))+geom_ribbon(aes(x=time, ymin=value-std, ymax=value+std, fill=as.factor(name)), alpha=0.2, colour = NA)+geom_line()+ylab("Average Animal Abundance Across Sites")+theme_classic()+ theme(legend.position = "none")
+dev.off()
+```
+
+```{r}
+pl <- as.data.frame(first$high$plants)
+colnames(pl)[1] <- "site"
+colnames(pl)[2] <- "time"
+
+tail(pl)
+pldat <- pl[,c(1,2,4,5,8,9,12,19,24,27,30)]
+colnames(pldat)[3:ncol(pldat)] <- c("p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9")
+
+
+plavg <- pldat %>% group_by(., time) %>% dplyr::mutate(., p1m=mean(p1), p1sd=sd(p1),
+                                                       p2m=mean(p2), p2sd=sd(p2),
+                                                       p3m=mean(p3), p3sd=sd(p3),
+                                                       p4m=mean(p4), p4sd=sd(p4),
+                                                       p5m=mean(p5), p5sd=sd(p5),
+                                                       p6m=mean(p6), p6sd=sd(p6),
+                                                       p7m=mean(p7), p7sd=sd(p7),
+                                                       p8m=mean(p8), p8sd=sd(p8),
+                                                       p9m=mean(p9), p9sd=sd(p9))
+
+
+plavg_l <- plavg %>% dplyr::select(., time, p1m, p2m, p3m, p4m, p5m, p6m, p7m, p8m, p9m) %>% unique() 
+plavg_l <- pivot_longer(plavg_l, cols=c(2:ncol(plavg_l)))
+plavg_l$name <- rep(1:9, 1001)
+
+
+psdlong <- plavg %>% dplyr::select(., time, p1sd, p2sd, p3sd, p4sd, p5sd, p6sd, p7sd, p8sd, p9sd) %>% unique() 
+
+psdlong <- pivot_longer(psdlong, cols=c(2:ncol(psdlong))) %>% dplyr::rename(., "std"="value")
+psdlong$name <- rep(1:9, 1001)
+
+pvgplot <- left_join(plavg_l, psdlong, by=c("time", "name"))
+
+pdf(file="../Figures/plantPlot_ex.pdf", height=8.5, width=11)
+ggplot(data=pvgplot, aes(x=time, y=value, col=as.factor(name)))+geom_ribbon(aes(x=time, ymin=value-std, ymax=value+std, fill=as.factor(name)), alpha=0.2, colour = NA)+geom_line()+ylab("Average Plant Abundance Across Sites")+theme_classic()+ theme(legend.position = "none")
+dev.off()
+```
+
