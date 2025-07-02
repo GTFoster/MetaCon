@@ -1,0 +1,74 @@
+---
+title: "Continuous Time"
+author: "Grant Foster"
+date: "2025-06-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Alright; I managed to get myself a bit stuck before, so now I'm going to try something different. We'll start by coding up a continous version of the multispecies community model. 
+
+```{r}
+K <- 20
+plantState <- c(10,10) # species community
+aP <- matrix(data=runif(length(plantState)^2, 0, 1/K), nrow=length(plantState)) #randomly draw interaction values, with max being equal to K
+diag(aP) <- 1/K #set diags as max carrying capacity (20)
+
+animalState <- c(5,1,5) # species community
+aA <- matrix(data=runif(length(animalState)^2, 0, 1/K), nrow=length(animalState)) #randomly draw interaction values
+diag(aA) <- 1/K #set diags 
+
+
+#Grab some trait values based on stuff. 
+pMean <- runif(length(plantState),0,1) 
+pVar  <- runif(length(plantState),0,0.15) 
+
+plantState
+aP*plantState
+
+```
+
+
+```{r}
+
+e <- 0.8 #From Valdovinos 2013
+#'@variable t: Time we want to simulate over (we need this format for deSolve)
+#'@variable state: a vector containing our starting S, I, and R states (in that order)
+#'@parameter parms: A named vector containing our parameters for the mode. In this case, that's beta (infection rate) and nu (recovery rate)
+sir <- function(t,state,alpha, parms){ #Simulate sir dynamics. Starts at time t, state
+  
+  V <- t(t(alpha*animalState)*plantState) #interaction frequency (assuming constant efficacy)
+  sigma <- V/rowSums(V) #interaction efficacy (based on specialization vaugely)
+  lambda <- aP*plantState
+
+    
+  dp1 <- sum(e*sigma[,1]*V[,1])
+  
+
+  
+  
+  with(as.list(parms), #using the "with" function allows us to reference what's inside params by their names
+{
+
+  list(res)
+})
+}
+```
+
+
+```{r}
+N <- 1e4 #Pop size
+parms <- c(N=N,beta=0.0001, nu = 1/7) #Parameters we set
+times <- seq(0,30,0.1) #Times we want to simulate over
+state <- c(N-1,1,0) #Our initial states
+#?deSolve::ode()
+simOutput <- data.frame(deSolve::ode(y=state, #starting values
+                                     times=times, 
+                                     func=sir, #use the function we created above
+                                     parms=parms)) #use the parameters we just defined
+
+colnames(simOutput) <- c("time","S","I","R")
+```
