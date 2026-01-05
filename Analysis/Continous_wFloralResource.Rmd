@@ -14,11 +14,11 @@ Alright; I managed to get myself a bit stuck before, so now I'm going to try som
 ```{r}
 K <- 20
 plantState <- c(10,10) # species community
-aP <- matrix(data=runif(length(plantState)^2, 0, 1/K), nrow=length(plantState)) #randomly draw interaction values, with max being equal to K
+aP <- matrix(data=runif(length(plantState)^2, 0, 1/K), nrow=length(plantState)) #randomly draw interaction values, with max being equal to K. Interactions here are non-symmetric
 diag(aP) <- 1/K #set diags as max carrying capacity (20)
 
 animalState <- c(5,1,5) # species community
-aA <- matrix(data=runif(length(animalState)^2, 0, 1/K), nrow=length(animalState)) #randomly draw interaction values
+aA <- matrix(data=runif(length(animalState)^2, 0, 1/K), nrow=length(animalState)) #randomly draw interaction values, again non-symmetric
 diag(aA) <- 1/K #set diags 
 
 
@@ -29,12 +29,16 @@ pVar  <- runif(length(plantState),0,0.15)
 plantState
 aP*plantState
 
+aP
+aA
+
 ```
 
 
 ```{r}
 
 e <- 0.8 #From Valdovinos 2013
+alpha <- 
 #'@variable t: Time we want to simulate over (we need this format for deSolve)
 #'@variable state: a vector containing our starting S, I, and R states (in that order)
 #'@parameter parms: A named vector containing our parameters for the mode. In this case, that's beta (infection rate) and nu (recovery rate)
@@ -58,7 +62,7 @@ sir <- function(t,state,alpha, parms){ #Simulate sir dynamics. Starts at time t,
 }
 ```
 
-
+From Parasitology
 ```{r}
 N <- 1e4 #Pop size
 parms <- c(N=N,beta=0.0001, nu = 1/7) #Parameters we set
