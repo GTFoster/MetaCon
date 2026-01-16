@@ -1,0 +1,144 @@
+---
+title: "Differential_Version"
+author: "Grant Foster"
+date: "2026-01-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Returning for a differential version of this
+```{r}
+n_animals <- 4
+a_pops <- vector(mode="numeric", length=n_animals) #animal population size
+a_traitM <- vector(mode="numeric", length=n_animals) #animal trait mean
+a_traitV <- vector(mode="numeric", length=n_animals) #animal trait variance
+
+n_plants <- 3
+p_pops <- vector(mode="numeric", length=n_plants) #plant population size
+r_pops <- vector(mode="numeric", length=n_plants)
+p_traitM <- vector(mode="numeric", length=n_plants) #plant trait mean
+p_traitV <- vector(mode="numeric", length=n_plants) #plant trait variance
+alpha <- numeri
+```
+
+Make some dummy trait data + pop data to start
+```{r}
+p_pops[1:n_plants] <- c(.10, .05, 0.25)
+r_pops[1:n_plants] <- c(.10, .05, 0.25)
+#p_traitM[1:n_plants] <- c(0.25, 0.99, 0.5)
+#p_traitV[1:n_plants] <- c(0.1, 0.1, 0.1) #All set to be the same in Becker paper
+
+
+a_pops[1:n_animals] <- c(.5, .1, .2, 0.5)
+
+#Pollination Interaction strengths
+alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
+min.f1f2 <- function(x, mu1, mu2, sd1, sd2) { #Create function that describes the minimum of two overlapping normal curves
+    f1 <- dnorm(x, mean=mu1, sd=sd1)
+    f2 <- dnorm(x, mean=mu2, sd=sd2)
+    pmin(f1, f2)
+}
+alpha <- matrix(nrow=n_animals, ncol=n_plants) #Create an empty matrix for plant-pollinator partnerships
+for(ia in 1:n_animals){
+  for(ip in 1:n_plants){
+    alpha[ia, ip] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[ip], mu2=a_traitM[ia], sd1=p_traitV[ip], sd2=a_traitV[ia])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    }
+}
+
+#Competition Strengths
+w <- matrix(data=NA, nrow=n_plants, ncol=n_plants)
+
+for(p1 in 1:n_plants){
+  for(p2 in 1:n_plants){
+    w[p1, p2] <- integrate(min.f1f2, -Inf, Inf, mu1=p_traitM[p1], mu2=p_traitM[p2], sd1=p_traitV[p1], sd2=p_traitV[p2])$value #Integrate our minimum equation over all numbers; output is the total area overlapping both curves, with max value of perfectly overlapping curves as 1
+    }
+}
+table(round(diag(w), 6)==1) #Sense check; since there's perfect overlap, all diagonals should be equal to 1. 
+```
+
+Defining dynamics
+
+### Aside: SIR Model for DPLYR reference
+
+```{r}
+#Params for plant recruitment, set the same for all species
+e <- 0.8 #seeds per pollination event
+mu <- 0.002 #background death rate
+g <- 0.4 #maximum recruitment rate of seeds
+
+
+#Params for Resource change
+B <- 0.4 #Production rate of floral resources 
+phi <- 0.04 #Self-limitation parameter of resource production
+b <- 0.4 #Pollinator extraction efficiency of resource in each visit, assumes linear functional response
+
+#Params for Animals
+c <- 0.2 #Conversion efficiency of floral resources to pollinator births
+
+sim <- function(t, state, parms){
+  
+      with(as.list(parms), #using the "with" function allows us to reference what's inside params by their names
+{
+  V_p1 <- a_pops*p_pops[1]*alpha[,1] #Visits is a function of both pop sizes and interaction strength, update, has to be square to be useful here 
+  V_p2 <- a_pops*p_pops[2]*alpha[,2]
+  V_p3 <- a_pops*p_pops[3]*alpha[,3]
+  
+  
+  
+  sigma <- V/(sum(V)) #sigma looks at overall visit propotion (proxy for conspecific pollen quality)
+  gamma <- g*(1-sum(w[,1]*p_pops))#Recruitment Limitation, carrying capacity of 1
+    dp_1 <- gamma*sum(sigma*V*e) - mu*p_pops[1]
+    dR_1 <- B*p_pops[1]- sum(V*b*r_pops[1]/p_pops[1])
+    da_1 <- c*V
+    alpha <- 
+  list(res)
+})
+}
+```
+
+
+```{r}
+#'@variable t: Time we want to simulate over (we need this format for deSolve)
+#'@variable state: a vector containing our starting S, I, and R states (in that order)
+#'@parameter parms: A named vector containing our parameters for the mode. In this case, that's beta (infection rate) and nu (recovery rate)
+
+sir <- function(t,state,parms){ #Simulate sir dynamics. Starts at time t, state
+    S <- state[1] #Defining the start of our system
+    I <- state[2]
+    R <- state[3]
+  with(as.list(parms), #using the "with" function allows us to reference what's inside params by their names
+{
+    dS <- -beta*S*I #Equation for change in Susceptibles over time
+    dI <- beta*S*I - nu*I #Same for Infecteds
+    dR <- nu*I #Recovered
+    res <- c(dS,dI,dR) #Output is a list of dx/dt values
+  list(res)
+})
+}
+```
+
+Now we've got a system of equations representing the basic SIR model. Let's simulate it
+```{r}
+N <- 1e4 #Pop size
+parms <- c(N=N,beta=0.0001, nu = 1/7) #Parameters we set
+times <- seq(0,30,0.1) #Times we want to simulate over
+state <- c(N-1,1,0) #Our initial states
+#?deSolve::ode()
+  simOutput <- data.frame(deSolve::ode(y=state, #starting values
+                                     times=times, 
+                                     func=sir, #use the function we created above
+                                     parms=parms)) #use the parameters we just defined
+
+colnames(simOutput) <- c("time","S","I","R")
+```
+
+
+
+```{r}
+
+```
+
